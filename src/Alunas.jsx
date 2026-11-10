@@ -4,7 +4,10 @@ import { supabase } from './supabase'
 export default function Alunas({ onFichas }) {
   const [lista, setLista] = useState([])
   const [edit, setEdit] = useState(null)
+  const [nova, setNova] = useState(null)
   const [msg, setMsg] = useState('')
+  const [ok, setOk] = useState('')
+  const [salvando, setSalvando] = useState(false)
 
   async function carregar() {
     const [p, u] = await Promise.all([
@@ -16,6 +19,20 @@ export default function Alunas({ onFichas }) {
     setLista(p.data.map(a => ({ ...a, ultimo: mapa[a.id]?.ultimo_treino_em, total: mapa[a.id]?.total_treinos || 0 })))
   }
   useEffect(() => { carregar() }, [])
+
+  async function criar(e) {
+    e.preventDefault()
+    setSalvando(true); setMsg(''); setOk('')
+    const { error } = await supabase.functions.invoke('criar-aluna', { body: nova })
+    setSalvando(false)
+    if (error) {
+      let m = error.message
+      try { const j = await error.context.json(); if (j.erro) m = j.erro } catch (_) {}
+      return setMsg(m)
+    }
+    setOk(`${nova.nome} cadastrada. Envie a ela o e-mail e a senha.`)
+    setNova(null); carregar()
+  }
 
   async function salvar(e) {
     e.preventDefault()
@@ -29,6 +46,21 @@ export default function Alunas({ onFichas }) {
     await supabase.from('profiles').update({ ativa: !a.ativa }).eq('id', a.id)
     carregar()
   }
+
+  if (nova) return (
+    <form onSubmit={criar} className="card">
+      <h3>Nova aluna</h3>
+      <input placeholder="Nome" value={nova.nome} onChange={e => setNova({ ...nova, nome: e.target.value })} required />
+      <input type="email" placeholder="E-mail (será o login dela)" value={nova.email} onChange={e => setNova({ ...nova, email: e.target.value })} required />
+      <input placeholder="Senha inicial (mínimo 6 caracteres)" value={nova.senha} onChange={e => setNova({ ...nova, senha: e.target.value })} required minLength={6} />
+      <input placeholder="Telefone (opcional)" value={nova.telefone} onChange={e => setNova({ ...nova, telefone: e.target.value })} />
+      {msg && <p className="erro">{msg}</p>}
+      <div className="row">
+        <button className="btn" disabled={salvando}>{salvando ? 'Cadastrando…' : 'Cadastrar'}</button>
+        <button type="button" className="btn sec" onClick={() => { setNova(null); setMsg('') }}>Cancelar</button>
+      </div>
+    </form>
+  )
 
   if (edit) return (
     <form onSubmit={salvar} className="card">
@@ -45,8 +77,12 @@ export default function Alunas({ onFichas }) {
 
   return (
     <>
-      <p className="muted">Para cadastrar uma aluna nova, crie a conta dela em Authentication, Users, no painel do Supabase. Ela aparece aqui automaticamente.</p>
+      <div className="row between" style={{ cursor: 'default' }}>
+        <strong>Minhas alunas</strong>
+        <button className="btn" onClick={() => { setNova({ nome: '', email: '', senha: '', telefone: '' }); setMsg(''); setOk('') }}>+ Nova aluna</button>
+      </div>
       {msg && <p className="erro">{msg}</p>}
+      {ok && <p className="ok">{ok}</p>}
       {lista.length === 0 && <p className="muted">Nenhuma aluna cadastrada ainda.</p>}
       {lista.map(a => (
         <div key={a.id} className={'card' + (a.ativa ? '' : ' off')}>
