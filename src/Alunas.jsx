@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 
-export default function Alunas({ onFichas }) {
+export default function Alunas({ onFichas, onEvolucao }) {
   const [lista, setLista] = useState([])
   const [edit, setEdit] = useState(null)
   const [nova, setNova] = useState(null)
@@ -92,6 +92,7 @@ export default function Alunas({ onFichas }) {
           </div>
           <div className="row">
             <button className="btn" onClick={() => onFichas(a)}>Fichas</button>
+            <button className="btn sec" onClick={() => onEvolucao(a)}>Evolução</button>
             <button className="btn sec" onClick={() => setEdit(a)}>Editar</button>
             <button className="btn sec" onClick={() => alternar(a)}>{a.ativa ? 'Desativar' : 'Reativar'}</button>
           </div>

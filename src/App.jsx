@@ -3,6 +3,9 @@ import { supabase } from './supabase'
 import Exercicios from './Exercicios'
 import Alunas from './Alunas'
 import Fichas from './Fichas'
+import Historico from './Historico'
+import Aluna from './Aluna'
+import Senha from './Senha'
 
 function Login() {
   const [email, setEmail] = useState('')
@@ -32,6 +35,8 @@ export default function App() {
   const [perfil, setPerfil] = useState(null)
   const [aba, setAba] = useState('alunas')
   const [alunaSel, setAlunaSel] = useState(null)
+  const [evolSel, setEvolSel] = useState(null)
+  const [senhaAberta, setSenhaAberta] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -50,28 +55,43 @@ export default function App() {
   if (!perfil) return <p className="center">Carregando…</p>
 
   const admin = perfil.papel === 'admin'
+  const irPara = a => { setAba(a); setAlunaSel(null); setEvolSel(null) }
+
+  let conteudo
+  if (senhaAberta) {
+    conteudo = <main><Senha onFechar={() => setSenhaAberta(false)} /></main>
+  } else if (admin) {
+    conteudo = (
+      <>
+        <nav>
+          <button className={aba === 'alunas' ? 'on' : ''} onClick={() => irPara('alunas')}>Alunas</button>
+          <button className={aba === 'exercicios' ? 'on' : ''} onClick={() => irPara('exercicios')}>Exercícios</button>
+        </nav>
+        <main>
+          {aba === 'exercicios' ? <Exercicios />
+            : alunaSel ? <Fichas aluna={alunaSel} onVoltar={() => setAlunaSel(null)} />
+            : evolSel ? <Historico alunaId={evolSel.id} titulo={`Evolução de ${evolSel.nome}`} onVoltar={() => setEvolSel(null)} />
+            : <Alunas onFichas={setAlunaSel} onEvolucao={setEvolSel} />}
+        </main>
+      </>
+    )
+  } else if (perfil.ativa === false) {
+    conteudo = <main><p>Seu acesso está desativado. Fale com o seu treinador.</p></main>
+  } else {
+    conteudo = <Aluna perfil={perfil} />
+  }
+
   return (
     <div className="app">
       <header>
         <strong>Minha Consultoria</strong>
-        <button className="link" onClick={() => supabase.auth.signOut()}>Sair</button>
+        <span>
+          <button className="link" onClick={() => setSenhaAberta(true)}>Senha</button>
+          {' · '}
+          <button className="link" onClick={() => supabase.auth.signOut()}>Sair</button>
+        </span>
       </header>
-      {admin ? (
-        <>
-          <nav>
-            <button className={aba === 'alunas' ? 'on' : ''} onClick={() => { setAba('alunas'); setAlunaSel(null) }}>Alunas</button>
-            <button className={aba === 'exercicios' ? 'on' : ''} onClick={() => setAba('exercicios')}>Exercícios</button>
-          </nav>
-          <main>{aba === 'alunas'
-            ? (alunaSel ? <Fichas aluna={alunaSel} onVoltar={() => setAlunaSel(null)} /> : <Alunas onFichas={setAlunaSel} />)
-            : <Exercicios />}</main>
-        </>
-      ) : (
-        <main>
-          <h2>Olá, {perfil.nome}!</h2>
-          <p>Seus treinos aparecerão aqui nas próximas etapas.</p>
-        </main>
-      )}
+      {conteudo}
     </div>
   )
 }

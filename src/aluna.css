@@ -1,0 +1,20 @@
+.serie { display: grid; grid-template-columns: 52px 1fr 1fr 56px; gap: 8px; align-items: center; margin: 8px 0; }
+.serie input { margin: 0; text-align: center; font-size: 18px; padding: 12px 4px; }
+.serie.done input { background: #e6f6f5; }
+.chk { height: 48px; border-radius: 12px; border: 2px solid var(--verde); background: #fff; color: var(--verde); font-size: 22px; }
+.chk.on { background: var(--verde); color: #fff; }
+.descanso { position: fixed; left: 0; right: 0; bottom: 0; background: var(--verde); color: #fff; padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: space-between; align-items: center; z-index: 20; }
+.descanso .tempo { font-size: 28px; font-weight: 700; }
+.descanso button { background: #fff; color: var(--verde); border: 0; border-radius: 10px; padding: 10px 14px; font-size: 15px; margin-left: 6px; }
+.pad-desc { padding-bottom: 90px; }
+.lista-ex { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+.progresso { color: var(--verde); font-weight: 600; white-space: nowrap; }
+.cansaco { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 8px 0; }
+.cansaco button { padding: 14px 0; font-size: 18px; border-radius: 12px; border: 2px solid var(--verde); background: #fff; color: var(--verde); }
+.cansaco button.on { background: var(--verde); color: #fff; }
+.grafico { width: 100%; height: auto; background: #fff; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+table.hist { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; margin-top: 10px; }
+table.hist th, table.hist td { padding: 9px 8px; text-align: left; border-bottom: 1px solid #eef; font-size: 14px; }
+.chips { display: flex; gap: 8px; margin: 10px 0; }
+.chips button { flex: 1; padding: 8px; border-radius: 99px; border: 1px solid var(--verde); background: #fff; color: var(--verde); }
+.chips button.on { background: var(--verde); color: #fff; }
