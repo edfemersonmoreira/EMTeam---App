@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 
-export default function Alunas() {
+export default function Alunas({ onFichas }) {
   const [lista, setLista] = useState([])
   const [edit, setEdit] = useState(null)
   const [msg, setMsg] = useState('')
@@ -55,6 +55,7 @@ export default function Alunas() {
             {a.telefone || 'sem telefone'} · {a.ultimo ? 'último treino em ' + new Date(a.ultimo).toLocaleDateString('pt-BR') : 'ainda não treinou'}
           </div>
           <div className="row">
+            <button className="btn" onClick={() => onFichas(a)}>Fichas</button>
             <button className="btn sec" onClick={() => setEdit(a)}>Editar</button>
             <button className="btn sec" onClick={() => alternar(a)}>{a.ativa ? 'Desativar' : 'Reativar'}</button>
           </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import Exercicios from './Exercicios'
 import Alunas from './Alunas'
+import Fichas from './Fichas'
 
 function Login() {
   const [email, setEmail] = useState('')
@@ -30,6 +31,7 @@ export default function App() {
   const [session, setSession] = useState(undefined)
   const [perfil, setPerfil] = useState(null)
   const [aba, setAba] = useState('alunas')
+  const [alunaSel, setAlunaSel] = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -57,10 +59,12 @@ export default function App() {
       {admin ? (
         <>
           <nav>
-            <button className={aba === 'alunas' ? 'on' : ''} onClick={() => setAba('alunas')}>Alunas</button>
+            <button className={aba === 'alunas' ? 'on' : ''} onClick={() => { setAba('alunas'); setAlunaSel(null) }}>Alunas</button>
             <button className={aba === 'exercicios' ? 'on' : ''} onClick={() => setAba('exercicios')}>Exercícios</button>
           </nav>
-          <main>{aba === 'alunas' ? <Alunas /> : <Exercicios />}</main>
+          <main>{aba === 'alunas'
+            ? (alunaSel ? <Fichas aluna={alunaSel} onVoltar={() => setAlunaSel(null)} /> : <Alunas onFichas={setAlunaSel} />)
+            : <Exercicios />}</main>
         </>
       ) : (
         <main>
