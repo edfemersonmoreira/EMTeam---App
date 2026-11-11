@@ -24,8 +24,8 @@ header {
   border-bottom: 1px solid var(--borda); color: var(--txt);
 }
 header .link { font-size: 14px; }
-.logo { height: 30px; width: auto; display: block; }
-.logo.grande { height: 72px; margin: 0 auto 18px; }
+.logo { height: 36px; width: auto; display: block; }
+.logo.grande { height: auto; width: 78%; max-width: 280px; margin: 0 auto 22px; }
 .marca { font-weight: 800; font-size: 19px; letter-spacing: -.01em; }
 .marca.grande { display: block; font-size: 30px; margin-bottom: 18px; }
 nav { display: flex; gap: 6px; padding: 8px 12px; background: var(--bg2); border-bottom: 1px solid var(--borda); }
