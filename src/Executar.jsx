@@ -120,7 +120,7 @@ export default function Executar({ treino, perfil, onSair }) {
     setHistEx({ id: ex.exercicio_id, dias: Object.values(m).sort((a, b) => b.k.localeCompare(a.k)).slice(0, 5) })
   }
 
-  const feitas = ex = Array.from({ length: ex.series }, (_, k) => valor(ex, k + 1)).filter(v => v.concluida).length
+  const feitas = ex => Array.from({ length: ex.series }, (_, k) => valor(ex, k + 1)).filter(v => v.concluida).length
 
   async function finalizar(e) {
     e.preventDefault()
