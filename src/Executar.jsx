@@ -18,6 +18,7 @@ export default function Executar({ treino, perfil, onSair }) {
   const [agora, setAgora] = useState(Date.now())
   const [carregando, setCarregando] = useState(true)
   const [msg, setMsg] = useState('')
+  const [histEx, setHistEx] = useState(null)
 
   useEffect(() => {
     (async () => {
@@ -103,7 +104,23 @@ export default function Executar({ treino, perfil, onSair }) {
     }
   }
 
-  const feitas = ex => Array.from({ length: ex.series }, (_, k) => valor(ex, k + 1)).filter(v => v.concluida).length
+  async function abrirHist(ex) {
+    if (histEx?.id === ex.exercicio_id) return setHistEx(null)
+    const { data, error } = await supabase.from('registros_series')
+      .select('carga_kg, repeticoes, registrado_em').eq('aluna_id', perfil.id)
+      .eq('exercicio_id', ex.exercicio_id).eq('concluida', true).not('carga_kg', 'is', null)
+      .order('registrado_em', { ascending: false }).limit(60)
+    if (error) return setMsg(error.message)
+    const m = {}
+    data.forEach(r => {
+      const k = new Date(r.registrado_em).toLocaleDateString('sv-SE')
+      const c = Number(r.carga_kg), rp = r.repeticoes || 0
+      if (!m[k] || c > m[k].carga || (c === m[k].carga && rp > m[k].reps)) m[k] = { k, carga: c, reps: rp }
+    })
+    setHistEx({ id: ex.exercicio_id, dias: Object.values(m).sort((a, b) => b.k.localeCompare(a.k)).slice(0, 5) })
+  }
+
+  const feitas = ex = Array.from({ length: ex.series }, (_, k) => valor(ex, k + 1)).filter(v => v.concluida).length
 
   async function finalizar(e) {
     e.preventDefault()
@@ -183,6 +200,27 @@ export default function Executar({ treino, perfil, onSair }) {
           })}
         </div>
         {msg && <p className="erro">{msg}</p>}
+        <button className="btn sec" style={{ width: '100%' }} onClick={() => abrirHist(ex)}>
+          {histEx?.id === ex.exercicio_id ? 'Ocultar histórico' : 'Histórico de cargas'}
+        </button>
+        {histEx?.id === ex.exercicio_id && (
+          <div className="card">
+            {histEx.dias.length === 0
+              ? <p className="muted" style={{ margin: 0 }}>Ainda sem registros deste exercício.</p>
+              : (
+                <table className="hist" style={{ margin: 0 }}>
+                  <tbody>
+                    {histEx.dias.map(d => (
+                      <tr key={d.k}>
+                        <td>{new Date(d.k + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
+                        <td>{d.carga} kg</td><td>{d.reps} reps</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+          </div>
+        )}
         <div className="row">
           {!ehUltimo
             ? <button className="btn" onClick={() => setIdx(idx + 1)}>Próximo exercício →</button>

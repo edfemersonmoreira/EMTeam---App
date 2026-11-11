@@ -6,6 +6,7 @@ import Fichas from './Fichas'
 import Historico from './Historico'
 import Aluna from './Aluna'
 import Senha from './Senha'
+import Logo from './Logo'
 
 function Login() {
   const [email, setEmail] = useState('')
@@ -19,7 +20,7 @@ function Login() {
   }
   return (
     <div className="login">
-      <h1>Minha Consultoria</h1>
+      <Logo grande />
       <form onSubmit={entrar}>
         <input type="email" placeholder="E-mail" value={email} onChange={e => setEmail(e.target.value)} required />
         <input type="password" placeholder="Senha" value={senha} onChange={e => setSenha(e.target.value)} required />
@@ -67,7 +68,7 @@ export default function App() {
           <button className={aba === 'alunas' ? 'on' : ''} onClick={() => irPara('alunas')}>Alunas</button>
           <button className={aba === 'exercicios' ? 'on' : ''} onClick={() => irPara('exercicios')}>Exercícios</button>
         </nav>
-        <main>
+        <main className="wide">
           {aba === 'exercicios' ? <Exercicios />
             : alunaSel ? <Fichas aluna={alunaSel} onVoltar={() => setAlunaSel(null)} />
             : evolSel ? <Historico alunaId={evolSel.id} titulo={`Evolução de ${evolSel.nome}`} onVoltar={() => setEvolSel(null)} />
@@ -84,7 +85,7 @@ export default function App() {
   return (
     <div className="app">
       <header>
-        <strong>Minha Consultoria</strong>
+        <Logo />
         <span>
           <button className="link" onClick={() => setSenhaAberta(true)}>Senha</button>
           {' · '}
