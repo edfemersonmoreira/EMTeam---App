@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import { ytEmbed } from './Exercicios'
+import Icone from './Icone'
 import './aluna.css'
 
 const fmtT = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
@@ -75,7 +76,7 @@ export default function Executar({ treino, perfil, onSair }) {
     const r = reg[chave(ex, n)]
     if (r) return r
     const u = ultimo[ex.exercicio_id]
-    return { carga: u?.carga_kg ?? '', reps: u?.repeticoes ?? '', concluida: false }
+    return { carga: u ? (u.carga_kg ?? '') : '', reps: u ? (u.repeticoes ?? '') : '', concluida: false }
   }
 
   function editar(ex, n, campo, val) {
@@ -105,7 +106,7 @@ export default function Executar({ treino, perfil, onSair }) {
   }
 
   async function abrirHist(ex) {
-    if (histEx?.id === ex.exercicio_id) return setHistEx(null)
+    if (histEx && histEx.id === ex.exercicio_id) return setHistEx(null)
     const { data, error } = await supabase.from('registros_series')
       .select('carga_kg, repeticoes, registrado_em').eq('aluna_id', perfil.id)
       .eq('exercicio_id', ex.exercicio_id).eq('concluida', true).not('carga_kg', 'is', null)
@@ -135,75 +136,87 @@ export default function Executar({ treino, perfil, onSair }) {
 
   const restante = ate ? Math.max(0, Math.ceil((ate - agora) / 1000)) : 0
   const barra = ate && (
-    <div className="descanso">
-      <div><div>Descanso</div><span className="tempo">{fmtT(restante)}</span></div>
+    <div className="descanso" role="timer">
+      <div><div className="rot">Descanso</div><span className="tempo">{fmtT(restante)}</span></div>
       <div>
-        <button onClick={() => setAte(a => a + 15000)}>+15s</button>
+        <button onClick={() => setAte(a => a + 15000)}>+15 s</button>
         <button onClick={() => setAte(null)}>Pular</button>
       </div>
     </div>
   )
 
-  if (fim) return (
-    <main>
-      <form onSubmit={finalizar} className="card">
-        <h3>Finalizar {treino.nome}</h3>
-        <p>Como foi o cansaço hoje? (1 = leve, 5 = exaustivo)</p>
-        <div className="cansaco">
-          {[1, 2, 3, 4, 5].map(n => (
-            <button type="button" key={n} className={fim.cansaco === n ? 'on' : ''} onClick={() => setFim({ ...fim, cansaco: n })}>{n}</button>
-          ))}
-        </div>
-        <textarea rows="3" placeholder="Observação (opcional)" value={fim.obs} onChange={e => setFim({ ...fim, obs: e.target.value })} />
-        {msg && <p className="erro">{msg}</p>}
-        <div className="row">
-          <button className="btn">Concluir treino</button>
-          <button type="button" className="btn sec" onClick={() => setFim(null)}>Voltar</button>
-        </div>
-      </form>
-    </main>
-  )
+  if (fim) {
+    return (
+      <main>
+        <form onSubmit={finalizar} className="card">
+          <h3>Finalizar {treino.nome}</h3>
+          <p className="muted">Como foi o cansaço hoje? De 1 (leve) a 5 (exaustivo).</p>
+          <div className="cansaco">
+            {[1, 2, 3, 4, 5].map(n => (
+              <button type="button" key={n} className={fim.cansaco === n ? 'on' : ''} onClick={() => setFim({ ...fim, cansaco: n })}>{n}</button>
+            ))}
+          </div>
+          <textarea rows="3" placeholder="Observação para o treinador (opcional)" value={fim.obs} onChange={e => setFim({ ...fim, obs: e.target.value })} />
+          {msg && <p className="erro">{msg}</p>}
+          <div className="row">
+            <button className="btn">Concluir treino</button>
+            <button type="button" className="btn sec" onClick={() => setFim(null)}>Voltar</button>
+          </div>
+        </form>
+      </main>
+    )
+  }
 
   if (idx !== null) {
     const ex = itens[idx]
     const u = ultimo[ex.exercicio_id]
-    const emb = ytEmbed(ex.exercicios?.video_url)
+    const emb = ytEmbed(ex.exercicios ? ex.exercicios.video_url : '')
     const ehUltimo = idx === itens.length - 1
+    const nome = ex.exercicios ? ex.exercicios.nome : ''
     return (
       <main className={ate ? 'pad-desc' : ''}>
-        <button className="btn sec" onClick={() => setIdx(null)}>← Lista de exercícios</button>
-        <div className="card">
-          <h3 style={{ margin: '0 0 4px' }}>{ex.exercicios?.nome}</h3>
-          <div className="muted">
-            {[ex.exercicios?.grupo_muscular, ex.exercicios?.equipamento].filter(Boolean).join(' · ')}
+        <div className="topo-exec">
+          <button className="icone-btn" onClick={() => setIdx(null)} aria-label="Voltar à lista de exercícios"><Icone nome="voltar" /></button>
+          <div className="grow">
+            <div className="muted">{treino.nome}, exercício {idx + 1} de {itens.length}</div>
+            <div className="barra"><span style={{ width: `${((idx + 1) / itens.length) * 100}%` }} /></div>
           </div>
-          {emb && <iframe className="video" src={emb} allowFullScreen title={ex.exercicios?.nome} />}
-          {ex.exercicios?.orientacoes && <p>{ex.exercicios.orientacoes}</p>}
-          {ex.observacao && <p><strong>Observação:</strong> {ex.observacao}</p>}
-          <p className="muted">
-            Prescrito: {ex.series} × {ex.repeticoes}{ex.descanso_seg ? ` · descanso ${ex.descanso_seg}s` : ''}
-            {u ? ` · Última vez: ${u.carga_kg ?? '–'} kg × ${u.repeticoes ?? '–'}` : ''}
-          </p>
         </div>
-        <div className="card">
-          <div className="serie muted" style={{ margin: 0 }}><span>Série</span><span>Carga (kg)</span><span>Reps</span><span></span></div>
+
+        {emb && <iframe className="video" src={emb} allowFullScreen title={nome} />}
+        <h2 className="ex-nome">{nome}</h2>
+        <div className="prescricao">{ex.series} séries de {ex.repeticoes}{ex.descanso_seg ? `, descanso de ${ex.descanso_seg} s` : ''}</div>
+        {u && <div className="ultima">Última vez: {u.carga_kg ?? '–'} kg, {u.repeticoes ?? '–'} repetições</div>}
+        {ex.exercicios && ex.exercicios.orientacoes && <p className="orient">{ex.exercicios.orientacoes}</p>}
+        {ex.observacao && <p className="orient"><strong>Observação:</strong> {ex.observacao}</p>}
+
+        <div className="series">
           {Array.from({ length: ex.series }, (_, k) => k + 1).map(n => {
             const v = valor(ex, n)
             return (
               <div key={n} className={'serie' + (v.concluida ? ' done' : '')}>
-                <strong>{n}</strong>
-                <input inputMode="decimal" placeholder="kg" value={v.carga} onChange={e => editar(ex, n, 'carga', e.target.value)} onBlur={() => salvar(ex, n)} />
-                <input inputMode="numeric" placeholder={primeiroNumero(ex.repeticoes)} value={v.reps} onChange={e => editar(ex, n, 'reps', e.target.value)} onBlur={() => salvar(ex, n)} />
-                <button className={'chk' + (v.concluida ? ' on' : '')} onClick={() => alternar(ex, n, ehUltimo && n === ex.series)}>✓</button>
+                <span className="n">{n}</span>
+                <label className="campo">
+                  <input inputMode="decimal" placeholder="0" value={v.carga} aria-label={`Carga da série ${n}`}
+                    onChange={e => editar(ex, n, 'carga', e.target.value)} onBlur={() => salvar(ex, n)} />
+                  <span className="un">kg</span>
+                </label>
+                <label className="campo">
+                  <input inputMode="numeric" placeholder={primeiroNumero(ex.repeticoes)} value={v.reps} aria-label={`Repetições da série ${n}`}
+                    onChange={e => editar(ex, n, 'reps', e.target.value)} onBlur={() => salvar(ex, n)} />
+                  <span className="un">reps</span>
+                </label>
+                <button className={'chk' + (v.concluida ? ' on' : '')} aria-pressed={v.concluida}
+                  aria-label={`Concluir série ${n}`} onClick={() => alternar(ex, n, ehUltimo && n === ex.series)}>
+                  <Icone nome="check" tam={22} />
+                </button>
               </div>
             )
           })}
         </div>
         {msg && <p className="erro">{msg}</p>}
-        <button className="btn sec" style={{ width: '100%' }} onClick={() => abrirHist(ex)}>
-          {histEx?.id === ex.exercicio_id ? 'Ocultar histórico' : 'Histórico de cargas'}
-        </button>
-        {histEx?.id === ex.exercicio_id && (
+
+        {histEx && histEx.id === ex.exercicio_id && (
           <div className="card">
             {histEx.dias.length === 0
               ? <p className="muted" style={{ margin: 0 }}>Ainda sem registros deste exercício.</p>
@@ -221,9 +234,13 @@ export default function Executar({ treino, perfil, onSair }) {
               )}
           </div>
         )}
-        <div className="row">
+
+        <div className="acoes-exec">
+          <button className="link-texto" style={{ margin: 0 }} onClick={() => abrirHist(ex)}>
+            <Icone nome="grafico" tam={18} />{histEx && histEx.id === ex.exercicio_id ? 'Ocultar histórico' : 'Histórico de cargas'}
+          </button>
           {!ehUltimo
-            ? <button className="btn" onClick={() => setIdx(idx + 1)}>Próximo exercício →</button>
+            ? <button className="btn" onClick={() => setIdx(idx + 1)}>Próximo exercício<Icone nome="chevron" tam={16} /></button>
             : <button className="btn" onClick={() => setFim({ cansaco: 0, obs: '' })}>Finalizar treino</button>}
         </div>
         {barra}
@@ -231,24 +248,33 @@ export default function Executar({ treino, perfil, onSair }) {
     )
   }
 
+  const totalSeries = itens.reduce((a, x) => a + x.series, 0)
+  const concluidas = itens.reduce((a, x) => a + feitas(x), 0)
   return (
     <main className={ate ? 'pad-desc' : ''}>
-      <div className="row between" style={{ cursor: 'default' }}>
-        <button className="btn sec" onClick={onSair}>← Sair</button>
-        <strong>{treino.nome}</strong>
+      <div className="topo-exec">
+        <button className="icone-btn" onClick={onSair} aria-label="Sair do treino"><Icone nome="voltar" /></button>
+        <div className="grow">
+          <h2 style={{ margin: 0 }}>{treino.nome}</h2>
+          <div className="muted">{concluidas} de {totalSeries} séries concluídas</div>
+        </div>
       </div>
       {msg && <p className="erro">{msg}</p>}
       {itens.length === 0 && <p className="muted">Este treino ainda não tem exercícios.</p>}
-      {itens.map((ex, i) => (
-        <div key={ex.id} className="card lista-ex" onClick={() => setIdx(i)}>
-          <div>
-            <strong>{ex.exercicios?.nome}</strong>
-            <div className="muted">{ex.series} × {ex.repeticoes}</div>
-          </div>
-          <span className="progresso">{feitas(ex)}/{ex.series} ›</span>
-        </div>
-      ))}
-      <button className="btn" style={{ width: '100%', marginTop: 12 }} onClick={() => setFim({ cansaco: 0, obs: '' })}>Finalizar treino</button>
+      <div className="lista-escolha">
+        {itens.map((ex, i) => {
+          const ok = feitas(ex) >= ex.series
+          return (
+            <button key={ex.id} className="linha-ex" onClick={() => setIdx(i)}>
+              <span className={'num' + (ok ? ' ok' : '')}>{ok ? <Icone nome="check" tam={16} /> : i + 1}</span>
+              <span className="grow"><strong>{ex.exercicios ? ex.exercicios.nome : ''}</strong><span className="muted bl">{ex.series} séries de {ex.repeticoes}</span></span>
+              <span className="muted">{feitas(ex)}/{ex.series}</span>
+              <Icone nome="chevron" tam={16} />
+            </button>
+          )
+        })}
+      </div>
+      <button className="btn" style={{ width: '100%', marginTop: 16 }} onClick={() => setFim({ cansaco: 0, obs: '' })}>Finalizar treino</button>
       {barra}
     </main>
   )

@@ -4,6 +4,8 @@ import './editor.css'
 
 const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
 
+const DIAS = [['S', 1, 'Segunda'], ['T', 2, 'Terça'], ['Q', 3, 'Quarta'], ['Q', 4, 'Quinta'], ['S', 5, 'Sexta'], ['S', 6, 'Sábado'], ['D', 0, 'Domingo']]
+
 // Lê linhas como: "Agachamento livre 3x10-12 60s com pausa no fundo"
 export function parseLinhas(texto, biblioteca) {
   return texto.split('\n').map(l => l.trim()).filter(Boolean).map(linha => {
@@ -147,6 +149,14 @@ function TreinoCard({ treino, biblioteca, onChange }) {
     abrirModelos()
   }
 
+  const dias = treino.dias || []
+  async function toggleDia(d) {
+    const novo = dias.includes(d) ? dias.filter(x => x !== d) : [...dias, d].sort()
+    const { error } = await supabase.from('treinos').update({ dias: novo }).eq('id', treino.id)
+    if (error) setMsg('Não foi possível salvar os dias. Rode a migração da Etapa 6 no Supabase. ' + error.message)
+    else { setMsg(''); onChange() }
+  }
+
   const filtrados = biblioteca.filter(x =>
     `${x.nome} ${x.grupo_muscular || ''}`.toLowerCase().includes(busca.toLowerCase())).slice(0, 30)
   const reconhecidos = previa ? previa.filter(p => p.item) : []
@@ -156,6 +166,13 @@ function TreinoCard({ treino, biblioteca, onChange }) {
       <div className="topo">
         <input defaultValue={treino.nome} onBlur={renomear} style={{ fontWeight: 600 }} />
         <button className="mini" onClick={excluirTreino}>Excluir</button>
+      </div>
+
+      <div className="dias" aria-label="Dias da semana deste treino">
+        {DIAS.map(([l, d, nome]) => (
+          <button key={d} type="button" title={nome} aria-label={nome} aria-pressed={dias.includes(d)}
+            className={'dia' + (dias.includes(d) ? ' on' : '')} onClick={() => toggleDia(d)}>{l}</button>
+        ))}
       </div>
 
       {items.map((it, i) => (
