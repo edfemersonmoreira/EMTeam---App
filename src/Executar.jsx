@@ -179,7 +179,9 @@ export default function Executar({ treino, perfil, onSair }) {
           <button className="icone-btn" onClick={() => setIdx(null)} aria-label="Voltar à lista de exercícios"><Icone nome="voltar" /></button>
           <div className="grow">
             <div className="muted">{treino.nome}, exercício {idx + 1} de {itens.length}</div>
-            <div className="barra"><span style={{ width: `${((idx + 1) / itens.length) * 100}%` }} /></div>
+            <div className="regua-prog" aria-hidden="true">
+              {itens.map((_, i) => <i key={i} className={i < idx ? 'f' : i === idx ? 'a' : ''} />)}
+            </div>
           </div>
         </div>
 

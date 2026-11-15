@@ -1,0 +1,46 @@
+/* Identidade visual EM Team: elementos gráficos aplicados com discrição.
+   Anilha (anéis), régua de carga e padrão EM, sempre tom sobre tom e sem interferir na leitura. */
+
+header .logo { height: 28px; }
+.logo.grande { height: auto; width: 74%; max-width: 300px; margin: 0 auto 26px; }
+
+/* Login: anilha atrás da logo e padrão EM bem suave, que some em direção ao centro */
+body:has(.login) {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(180deg, rgba(16, 22, 23, 1) 0%, rgba(16, 22, 23, 0) 28%, rgba(16, 22, 23, 0) 62%, rgba(16, 22, 23, 1) 100%),
+    radial-gradient(circle at 50% 30%, transparent 0 190px, rgba(0, 128, 128, .22) 190px 204px, transparent 204px 232px, rgba(32, 178, 170, .16) 232px 235px, transparent 235px 268px, rgba(32, 178, 170, .10) 268px 270px, transparent 270px),
+    url(/padrao-em.svg);
+  background-size: auto, auto, 144px 80px;
+  background-repeat: no-repeat, no-repeat, repeat;
+}
+
+/* Treino de hoje: anilha no canto do bloco verde */
+.bloco:not(.calmo) {
+  background-image: radial-gradient(circle at 108% -14%, transparent 0 118px, rgba(255, 255, 255, .13) 118px 130px, transparent 130px 148px, rgba(255, 255, 255, .10) 148px 151px, transparent 151px 174px, rgba(255, 255, 255, .07) 174px 176px, transparent 176px);
+}
+
+/* Estados vazios (sem ficha, dia de descanso): padrão EM tom sobre tom */
+.bloco.calmo {
+  background-image: linear-gradient(90deg, var(--card) 38%, rgba(25, 35, 36, 0) 100%), url(/padrao-em-card.svg);
+  background-size: auto, 144px 80px;
+  background-repeat: no-repeat, repeat;
+  background-position: 0 0, right top;
+}
+
+/* Foto da aluna: segundo anel fino, como uma anilha */
+.avatar { box-shadow: 0 0 0 3px var(--bg), 0 0 0 4.5px rgba(32, 178, 170, .45); }
+
+/* Régua de carga: progresso dos exercícios (um traço por exercício) */
+.regua-prog { display: flex; align-items: flex-end; gap: 4px; height: 22px; margin-top: 6px; }
+.regua-prog i { flex: 1; height: 10px; border-radius: 1px; background: var(--borda2); transition: height .2s ease, background .2s ease; }
+.regua-prog i.f { height: 14px; background: var(--verde2); }
+.regua-prog i.a { height: 22px; background: var(--txt); }
+
+/* Régua de carga: divisor de seção */
+.regua-div {
+  height: 14px; margin: 6px 0 16px; border-bottom: 2px solid var(--verde);
+  background:
+    linear-gradient(90deg, var(--verde2) 0 2px, transparent 2px) 0 100% / 50px 14px repeat-x,
+    linear-gradient(90deg, #2f6a68 0 2px, transparent 2px) 0 100% / 10px 7px repeat-x;
+}

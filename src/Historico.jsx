@@ -17,6 +17,8 @@ function Grafico({ pontos }) {
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="grafico">
       <polyline points={pontos.map(p => `${X(p.t)},${Y(p.y)}`).join(' ')} fill="none" stroke="#008080" strokeWidth="2.5" />
+      <line x1={P} y1={H - 20} x2={W - P} y2={H - 20} stroke="#008080" strokeWidth="2" />
+      {pontos.map((p, i) => <line key={'t' + i} x1={X(p.t)} y1={H - 20} x2={X(p.t)} y2={H - 14} stroke="#20B2AA" strokeWidth="2" />)}
       {pontos.map((p, i) => <circle key={i} cx={X(p.t)} cy={Y(p.y)} r="4" fill="#20B2AA" />)}
       <text x={P} y={H - 6} fontSize="10" fill="#5b6b6b">{fmtCurto(t0)}</text>
       <text x={W - P} y={H - 6} fontSize="10" fill="#5b6b6b" textAnchor="end">{fmtCurto(t1)}</text>
@@ -100,7 +102,7 @@ export default function Historico({ alunaId, titulo, onVoltar }) {
   return (
     <>
       {topo}
-      {titulo && <h3>{titulo}</h3>}
+      {titulo && <><h3>{titulo}</h3><div className="regua-div" aria-hidden="true" /></>}
       {exercicios.length === 0 && <p className="muted">Ainda não há cargas registradas.</p>}
       {exercicios.map(ex => (
         <div key={ex.id} className="card lista-ex" onClick={() => setSel(ex.id)}>
