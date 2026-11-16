@@ -46,13 +46,39 @@ export default function Historico({ alunaId, titulo, onVoltar }) {
   const [periodo, setPeriodo] = useState(90)
   const [msg, setMsg] = useState('')
 
+  const [outras, setOutras] = useState([])
+
+  // Histórico de cargas: somente séries da categoria Principal (view registros_principais)
   useEffect(() => {
-    supabase.from('registros_series')
-      .select('exercicio_id, carga_kg, repeticoes, registrado_em, exercicios(nome)')
+    const consulta = tabela => supabase.from(tabela)
+      .select('exercicio_id, carga_kg, repeticoes, registrado_em')
       .eq('aluna_id', alunaId).eq('concluida', true).not('carga_kg', 'is', null)
       .order('registrado_em', { ascending: false }).limit(5000)
-      .then(({ data, error }) => { if (error) setMsg(error.message); else setRegs(data) })
+    ;(async () => {
+      let r = await consulta('registros_principais')
+      if (r.error) r = await consulta('registros_series')     // banco ainda sem a migração da Etapa 7.1
+      if (r.error) return setMsg(r.error.message)
+      const ids = [...new Set(r.data.map(x => x.exercicio_id))]
+      const nomes = {}
+      if (ids.length) {
+        const ex = await supabase.from('exercicios').select('id, nome').in('id', ids)
+        ;(ex.data || []).forEach(e => { nomes[e.id] = e.nome })
+      }
+      setRegs(r.data.map(x => ({ ...x, exercicios: { nome: nomes[x.exercicio_id] } })))
+    })()
   }, [alunaId])
+
+  // Registros das demais categorias (aquecimento, backoff, técnicas): ficam separados e fora do gráfico
+  useEffect(() => {
+    setOutras([])
+    if (!sel) return
+    supabase.from('registros_series')
+      .select('carga_kg, repeticoes, registrado_em, categorias_serie!inner(nome, cor, principal)')
+      .eq('aluna_id', alunaId).eq('exercicio_id', sel).eq('concluida', true)
+      .eq('categorias_serie.principal', false)
+      .order('registrado_em', { ascending: false }).limit(60)
+      .then(({ data, error }) => { if (!error && data) setOutras(data) })
+  }, [alunaId, sel])
 
   const exercicios = useMemo(() => {
     const m = {}
@@ -94,7 +120,25 @@ export default function Historico({ alunaId, titulo, onVoltar }) {
             ))}
           </tbody>
         </table>
-        <p className="muted">Carga e repetições da melhor série de cada dia.</p>
+        <p className="muted">Carga e repetições da melhor série principal de cada dia.</p>
+        {outras.length > 0 && (
+          <>
+            <h3 style={{ marginTop: 22 }}>Outras categorias</h3>
+            <p className="muted">Aquecimento, backoff e técnicas ficam registrados separadamente e não entram no gráfico.</p>
+            <table className="hist">
+              <thead><tr><th>Data</th><th>Categoria</th><th>Carga</th><th>Reps</th></tr></thead>
+              <tbody>
+                {outras.map((r, i) => (
+                  <tr key={i}>
+                    <td>{new Date(r.registrado_em).toLocaleDateString('pt-BR')}</td>
+                    <td><span className="cat-tag" style={{ '--cat': r.categorias_serie.cor }}><i className="cat-dot" />{r.categorias_serie.nome}</span></td>
+                    <td>{r.carga_kg ?? '–'} kg</td><td>{r.repeticoes ?? '–'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
       </>
     )
   }

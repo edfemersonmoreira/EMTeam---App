@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 import { ytEmbed } from './Exercicios'
 import Icone from './Icone'
+import { blocosDoExercicio, expandir, chaveUltimo, resumo } from './seriesUtil'
 import './aluna.css'
 
 const fmtT = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 const primeiroNumero = t => { const m = String(t || '').match(/\d+/); return m ? m[0] : '' }
-const chave = (ex, n) => `${ex.exercicio_id}:${n}`
+const numeroDe = t => { const m = String(t || '').match(/\d+(?:[.,]\d+)?/); return m ? m[0] : '' }
+const chave = (ex, slot) => `${ex.exercicio_id}:${slot.numero}`
+const principalDe = ex => ex.blocos.find(b => b.categorias_serie && b.categorias_serie.principal) || ex.blocos[0]
 
 export default function Executar({ treino, perfil, onSair }) {
   const [itens, setItens] = useState([])
@@ -20,13 +23,20 @@ export default function Executar({ treino, perfil, onSair }) {
   const [carregando, setCarregando] = useState(true)
   const [msg, setMsg] = useState('')
   const [histEx, setHistEx] = useState(null)
+  const legado = useRef(false)   // true quando o banco ainda não tem a migração da Etapa 7.1
 
   useEffect(() => {
     (async () => {
-      const te = await supabase.from('treino_exercicios').select('*, exercicios(*)')
+      let te = await supabase.from('treino_exercicios')
+        .select('*, exercicios(*), blocos:treino_exercicio_series(*, categorias_serie(nome, cor, principal))')
         .eq('treino_id', treino.id).order('ordem')
+      if (te.error) {
+        legado.current = true
+        te = await supabase.from('treino_exercicios').select('*, exercicios(*)').eq('treino_id', treino.id).order('ordem')
+      }
       if (te.error) { setMsg(te.error.message); return setCarregando(false) }
-      setItens(te.data)
+      const lista = te.data.map(it => { const blocos = blocosDoExercicio(it); return { ...it, blocos, slots: expandir(blocos) } })
+      setItens(lista)
 
       const desde = new Date(Date.now() - 12 * 3600 * 1000).toISOString()
       const s = await supabase.from('sessoes').select('*').eq('aluna_id', perfil.id)
@@ -48,14 +58,15 @@ export default function Executar({ treino, perfil, onSair }) {
       })
       setReg(m)
 
-      const ids = te.data.map(x => x.exercicio_id)
+      // Última carga de cada exercício, separada por categoria (a principal não se mistura com aquecimento etc.)
+      const ids = lista.map(x => x.exercicio_id)
       if (ids.length) {
         const h = await supabase.from('registros_series')
-          .select('exercicio_id, carga_kg, repeticoes, registrado_em')
+          .select(legado.current ? 'exercicio_id, carga_kg, repeticoes, registrado_em' : 'exercicio_id, categoria_id, carga_kg, repeticoes, registrado_em')
           .eq('aluna_id', perfil.id).in('exercicio_id', ids).eq('concluida', true)
-          .neq('sessao_id', sess.id).order('registrado_em', { ascending: false }).limit(300)
+          .neq('sessao_id', sess.id).order('registrado_em', { ascending: false }).limit(600)
         const u = {}
-        ;(h.data || []).forEach(x => { if (!u[x.exercicio_id]) u[x.exercicio_id] = x })
+        ;(h.data || []).forEach(x => { const k = chaveUltimo(x.exercicio_id, x.categoria_id); if (!u[k]) u[k] = x })
         setUltimo(u)
       }
       setCarregando(false)
@@ -72,42 +83,48 @@ export default function Executar({ treino, perfil, onSair }) {
     return () => clearInterval(id)
   }, [ate])
 
-  function valor(ex, n) {
-    const r = reg[chave(ex, n)]
+  function valor(ex, slot) {
+    const r = reg[chave(ex, slot)]
     if (r) return r
-    const u = ultimo[ex.exercicio_id]
+    const u = ultimo[chaveUltimo(ex.exercicio_id, slot.bloco.categoria_id)]
     return { carga: u ? (u.carga_kg ?? '') : '', reps: u ? (u.repeticoes ?? '') : '', concluida: false }
   }
 
-  function editar(ex, n, campo, val) {
-    setReg(r => ({ ...r, [chave(ex, n)]: { ...valor(ex, n), [campo]: val } }))
+  function editar(ex, slot, campo, val) {
+    setReg(r => ({ ...r, [chave(ex, slot)]: { ...valor(ex, slot), [campo]: val } }))
   }
 
-  async function salvar(ex, n, novo = {}) {
-    const atual = { ...valor(ex, n), ...novo }
-    setReg(r => ({ ...r, [chave(ex, n)]: atual }))
+  async function salvar(ex, slot, novo = {}) {
+    const atual = { ...valor(ex, slot), ...novo }
+    setReg(r => ({ ...r, [chave(ex, slot)]: atual }))
     const c = parseFloat(String(atual.carga).replace(',', '.'))
     const rp = parseInt(atual.reps, 10)
-    const { error } = await supabase.from('registros_series').upsert({
-      sessao_id: sessao.id, aluna_id: perfil.id, exercicio_id: ex.exercicio_id, numero_serie: n,
-      carga_kg: Number.isNaN(c) ? null : c,
-      repeticoes: Number.isNaN(rp) ? null : rp,
+    const base = {
+      sessao_id: sessao.id, aluna_id: perfil.id, exercicio_id: ex.exercicio_id, numero_serie: slot.numero,
+      carga_kg: Number.isNaN(c) ? null : c, repeticoes: Number.isNaN(rp) ? null : rp,
       concluida: atual.concluida, registrado_em: new Date().toISOString(),
-    }, { onConflict: 'sessao_id,exercicio_id,numero_serie' })
+    }
+    const completo = legado.current ? base : { ...base, categoria_id: slot.bloco.categoria_id, bloco_id: slot.bloco.id }
+    let { error } = await supabase.from('registros_series').upsert(completo, { onConflict: 'sessao_id,exercicio_id,numero_serie' })
+    if (error && !legado.current && /categoria_id|bloco_id/.test(error.message)) {
+      ;({ error } = await supabase.from('registros_series').upsert(base, { onConflict: 'sessao_id,exercicio_id,numero_serie' }))
+    }
     setMsg(error ? error.message : '')
   }
 
-  function alternar(ex, n, ultimaDoTreino) {
-    const concl = !valor(ex, n).concluida
-    salvar(ex, n, { concluida: concl })
-    if (concl && ex.descanso_seg && !ultimaDoTreino) {
-      setAte(Date.now() + ex.descanso_seg * 1000); setAgora(Date.now())
+  function alternar(ex, slot, ultimaDoTreino) {
+    const concl = !valor(ex, slot).concluida
+    salvar(ex, slot, { concluida: concl })
+    const desc = slot.bloco.descanso_seg
+    if (concl && desc && !ultimaDoTreino) {
+      setAte(Date.now() + desc * 1000); setAgora(Date.now())
     }
   }
 
+  // Histórico de cargas dentro do exercício: somente séries principais
   async function abrirHist(ex) {
     if (histEx && histEx.id === ex.exercicio_id) return setHistEx(null)
-    const { data, error } = await supabase.from('registros_series')
+    const { data, error } = await supabase.from(legado.current ? 'registros_series' : 'registros_principais')
       .select('carga_kg, repeticoes, registrado_em').eq('aluna_id', perfil.id)
       .eq('exercicio_id', ex.exercicio_id).eq('concluida', true).not('carga_kg', 'is', null)
       .order('registrado_em', { ascending: false }).limit(60)
@@ -121,7 +138,7 @@ export default function Executar({ treino, perfil, onSair }) {
     setHistEx({ id: ex.exercicio_id, dias: Object.values(m).sort((a, b) => b.k.localeCompare(a.k)).slice(0, 5) })
   }
 
-  const feitas = ex => Array.from({ length: ex.series }, (_, k) => valor(ex, k + 1)).filter(v => v.concluida).length
+  const feitas = ex => ex.slots.filter(s => valor(ex, s).concluida).length
 
   async function finalizar(e) {
     e.preventDefault()
@@ -169,10 +186,11 @@ export default function Executar({ treino, perfil, onSair }) {
 
   if (idx !== null) {
     const ex = itens[idx]
-    const u = ultimo[ex.exercicio_id]
     const emb = ytEmbed(ex.exercicios ? ex.exercicios.video_url : '')
-    const ehUltimo = idx === itens.length - 1
+    const ehUltimoEx = idx === itens.length - 1
     const nome = ex.exercicios ? ex.exercicios.nome : ''
+    const pb = principalDe(ex)
+    const u = ultimo[chaveUltimo(ex.exercicio_id, pb.categoria_id)]
     return (
       <main className={ate ? 'pad-desc' : ''}>
         <div className="topo-exec">
@@ -187,41 +205,56 @@ export default function Executar({ treino, perfil, onSair }) {
 
         {emb && <iframe className="video" src={emb} allowFullScreen title={nome} />}
         <h2 className="ex-nome">{nome}</h2>
-        <div className="prescricao">{ex.series} séries de {ex.repeticoes}{ex.descanso_seg ? `, descanso de ${ex.descanso_seg} s` : ''}</div>
-        {u && <div className="ultima">Última vez: {u.carga_kg ?? '–'} kg, {u.repeticoes ?? '–'} repetições</div>}
+        {u && <div className="ultima">Última vez ({pb.categorias_serie.nome.toLowerCase()}): {u.carga_kg ?? '–'} kg, {u.repeticoes ?? '–'} repetições</div>}
         {ex.exercicios && ex.exercicios.orientacoes && <p className="orient">{ex.exercicios.orientacoes}</p>}
         {ex.observacao && <p className="orient"><strong>Observação:</strong> {ex.observacao}</p>}
 
-        <div className="series">
-          {Array.from({ length: ex.series }, (_, k) => k + 1).map(n => {
-            const v = valor(ex, n)
-            return (
-              <div key={n} className={'serie' + (v.concluida ? ' done' : '')}>
-                <span className="n">{n}</span>
-                <label className="campo">
-                  <input inputMode="decimal" placeholder="0" value={v.carga} aria-label={`Carga da série ${n}`}
-                    onChange={e => editar(ex, n, 'carga', e.target.value)} onBlur={() => salvar(ex, n)} />
-                  <span className="un">kg</span>
-                </label>
-                <label className="campo">
-                  <input inputMode="numeric" placeholder={primeiroNumero(ex.repeticoes)} value={v.reps} aria-label={`Repetições da série ${n}`}
-                    onChange={e => editar(ex, n, 'reps', e.target.value)} onBlur={() => salvar(ex, n)} />
-                  <span className="un">reps</span>
-                </label>
-                <button className={'chk' + (v.concluida ? ' on' : '')} aria-pressed={v.concluida}
-                  aria-label={`Concluir série ${n}`} onClick={() => alternar(ex, n, ehUltimo && n === ex.series)}>
-                  <Icone nome="check" tam={22} />
-                </button>
+        {ex.blocos.map((b, bi) => {
+          const cat = b.categorias_serie
+          const slotsB = ex.slots.filter(s => s.bloco === b)
+          return (
+            <div key={b.id || `p${bi}`} className="bloco-exec" style={{ '--cat': cat.cor }}>
+              <div className="bloco-cab">
+                <span className="cat-tag"><i className="cat-dot" />{cat.nome}</span>
+                <span className="muted">
+                  {b.series} {b.series === 1 ? 'série' : 'séries'} de {b.repeticoes || '–'}
+                  {b.carga ? `, carga ${b.carga}` : ''}{b.descanso_seg ? `, descanso ${b.descanso_seg} s` : ''}
+                </span>
               </div>
-            )
-          })}
-        </div>
+              {b.observacao && <p className="orient" style={{ margin: '4px 0' }}>{b.observacao}</p>}
+              <div className="series">
+                {slotsB.map(slot => {
+                  const v = valor(ex, slot)
+                  return (
+                    <div key={slot.numero} className={'serie' + (v.concluida ? ' done' : '')}>
+                      <span className="n">{slot.k}</span>
+                      <label className="campo">
+                        <input inputMode="decimal" placeholder={numeroDe(b.carga) || '0'} value={v.carga} aria-label={`Carga da série ${slot.k} de ${cat.nome}`}
+                          onChange={e => editar(ex, slot, 'carga', e.target.value)} onBlur={() => salvar(ex, slot)} />
+                        <span className="un">kg</span>
+                      </label>
+                      <label className="campo">
+                        <input inputMode="numeric" placeholder={primeiroNumero(b.repeticoes)} value={v.reps} aria-label={`Repetições da série ${slot.k} de ${cat.nome}`}
+                          onChange={e => editar(ex, slot, 'reps', e.target.value)} onBlur={() => salvar(ex, slot)} />
+                        <span className="un">reps</span>
+                      </label>
+                      <button className={'chk' + (v.concluida ? ' on' : '')} aria-pressed={v.concluida}
+                        aria-label={`Concluir série ${slot.k} de ${cat.nome}`} onClick={() => alternar(ex, slot, ehUltimoEx && slot.numero === ex.slots.length)}>
+                        <Icone nome="check" tam={22} />
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
         {msg && <p className="erro">{msg}</p>}
 
         {histEx && histEx.id === ex.exercicio_id && (
           <div className="card">
             {histEx.dias.length === 0
-              ? <p className="muted" style={{ margin: 0 }}>Ainda sem registros deste exercício.</p>
+              ? <p className="muted" style={{ margin: 0 }}>Ainda sem registros principais deste exercício.</p>
               : (
                 <table className="hist" style={{ margin: 0 }}>
                   <tbody>
@@ -241,7 +274,7 @@ export default function Executar({ treino, perfil, onSair }) {
           <button className="link-texto" style={{ margin: 0 }} onClick={() => abrirHist(ex)}>
             <Icone nome="grafico" tam={18} />{histEx && histEx.id === ex.exercicio_id ? 'Ocultar histórico' : 'Histórico de cargas'}
           </button>
-          {!ehUltimo
+          {!ehUltimoEx
             ? <button className="btn" onClick={() => setIdx(idx + 1)}>Próximo exercício<Icone nome="chevron" tam={16} /></button>
             : <button className="btn" onClick={() => setFim({ cansaco: 0, obs: '' })}>Finalizar treino</button>}
         </div>
@@ -250,7 +283,7 @@ export default function Executar({ treino, perfil, onSair }) {
     )
   }
 
-  const totalSeries = itens.reduce((a, x) => a + x.series, 0)
+  const totalSeries = itens.reduce((a, x) => a + x.slots.length, 0)
   const concluidas = itens.reduce((a, x) => a + feitas(x), 0)
   return (
     <main className={ate ? 'pad-desc' : ''}>
@@ -265,12 +298,16 @@ export default function Executar({ treino, perfil, onSair }) {
       {itens.length === 0 && <p className="muted">Este treino ainda não tem exercícios.</p>}
       <div className="lista-escolha">
         {itens.map((ex, i) => {
-          const ok = feitas(ex) >= ex.series
+          const ok = ex.slots.length > 0 && feitas(ex) >= ex.slots.length
           return (
             <button key={ex.id} className="linha-ex" onClick={() => setIdx(i)}>
               <span className={'num' + (ok ? ' ok' : '')}>{ok ? <Icone nome="check" tam={16} /> : i + 1}</span>
-              <span className="grow"><strong>{ex.exercicios ? ex.exercicios.nome : ''}</strong><span className="muted bl">{ex.series} séries de {ex.repeticoes}</span></span>
-              <span className="muted">{feitas(ex)}/{ex.series}</span>
+              <span className="grow">
+                <strong>{ex.exercicios ? ex.exercicios.nome : ''}</strong>
+                <span className="cat-dots">{ex.blocos.map((b, k) => <i key={k} className="cat-dot" style={{ '--cat': b.categorias_serie.cor }} />)}</span>
+                <span className="muted bl">{resumo(ex.blocos)}</span>
+              </span>
+              <span className="muted">{feitas(ex)}/{ex.slots.length}</span>
               <Icone nome="chevron" tam={16} />
             </button>
           )

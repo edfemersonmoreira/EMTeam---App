@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import Icone from './Icone'
+import Categorias from './Categorias'
 
 export function ytEmbed(url) {
   if (!url) return null
@@ -22,6 +23,7 @@ export default function Exercicios() {
   const [form, setForm] = useState(null)
   const [msg, setMsg] = useState('')
   const [aberto, setAberto] = useState(null)
+  const [mostrarCats, setMostrarCats] = useState(false)
 
   async function carregar() {
     const { data, error } = await supabase.from('exercicios').select('*').order('nome')
@@ -52,6 +54,8 @@ export default function Exercicios() {
   const filtrados = lista.filter(x =>
     (!grupo || x.grupo_muscular === grupo) &&
     `${x.nome} ${x.grupo_muscular || ''}`.toLowerCase().includes(busca.toLowerCase()))
+
+  if (mostrarCats) return <Categorias onVoltar={() => setMostrarCats(false)} />
 
   if (form) {
     const opcoes = form.grupo_muscular && !GRUPOS.includes(form.grupo_muscular) ? [...GRUPOS, form.grupo_muscular] : GRUPOS
@@ -91,6 +95,7 @@ export default function Exercicios() {
           ))}
         </div>
       )}
+      <button className="link-texto" style={{ margin: '4px 0 0' }} onClick={() => setMostrarCats(true)}>Gerenciar tipos de série (aquecimento, backoff, dropset e outros)</button>
       {msg && <p className="erro">{msg}</p>}
       {filtrados.length === 0 && <p className="muted">Nenhum exercício encontrado. Toque em Novo para cadastrar.</p>}
       {filtrados.map(ex => (
