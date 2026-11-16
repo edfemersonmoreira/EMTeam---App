@@ -4,6 +4,8 @@ import Exercicios from './Exercicios'
 import Alunas from './Alunas'
 import Fichas from './Fichas'
 import Historico from './Historico'
+import Alongamentos from './Alongamentos'
+import Icone from './Icone'
 import Aluna from './Aluna'
 import Senha from './Senha'
 import Logo from './Logo'
@@ -67,9 +69,11 @@ export default function App() {
         <nav>
           <button className={aba === 'alunas' ? 'on' : ''} onClick={() => irPara('alunas')}>Alunas</button>
           <button className={aba === 'exercicios' ? 'on' : ''} onClick={() => irPara('exercicios')}>Exercícios</button>
+          <button className={aba === 'alongamentos' ? 'on' : ''} onClick={() => irPara('alongamentos')}><Icone nome="alongar" tam={18} />Alongamentos</button>
         </nav>
         <main className="wide">
-          {aba === 'exercicios' ? <Exercicios />
+          {aba === 'alongamentos' ? <Alongamentos />
+            : aba === 'exercicios' ? <Exercicios />
             : alunaSel ? <Fichas aluna={alunaSel} onVoltar={() => setAlunaSel(null)} />
             : evolSel ? <Historico alunaId={evolSel.id} titulo={`Evolução de ${evolSel.nome}`} onVoltar={() => setEvolSel(null)} />
             : <Alunas onFichas={setAlunaSel} onEvolucao={setEvolSel} />}

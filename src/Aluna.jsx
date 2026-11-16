@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import Executar from './Executar'
 import Historico from './Historico'
+import AlongAluna from './AlongAluna'
 import Avatar from './Avatar'
 import Icone from './Icone'
+import './along.css'
 import { WHATSAPP } from './config'
 
 const ABREV = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
@@ -22,6 +24,7 @@ export default function Aluna({ perfil }) {
   const [escolher, setEscolher] = useState(false)
   const [exec, setExec] = useState(null)
   const [msg, setMsg] = useState('')
+  const [seqN, setSeqN] = useState(0)
 
   async function carregar() {
     const f = await supabase.from('fichas').select('*').eq('aluna_id', perfil.id).eq('ativa', true).maybeSingle()
@@ -58,11 +61,18 @@ export default function Aluna({ perfil }) {
       .not('finalizada_em', 'is', null).not('treino_id', 'is', null)
       .order('finalizada_em', { ascending: false }).limit(1).maybeSingle()
     setUltimoId(u.data ? u.data.treino_id : null)
+
+    // Alongamentos e Flexibilidade: só mostra a seção se houver sequência prescrita
+    const sq = await supabase.from('sequencias_alongamento').select('id', { count: 'exact', head: true }).eq('ativa', true).eq('modelo', false)
+    setSeqN(sq.error ? 0 : (sq.count || 0))
   }
   useEffect(() => { carregar() }, [])
 
   if (exec) {
     return <Executar treino={exec} perfil={perfil} onSair={() => { setExec(null); setEscolher(false); carregar() }} />
+  }
+  if (tela === 'alongamentos') {
+    return <main><AlongAluna perfil={perfil} onVoltar={() => { setTela('home'); carregar() }} /></main>
   }
   if (tela === 'historico') {
     return <main><Historico alunaId={perfil.id} titulo="Histórico de cargas" onVoltar={() => setTela('home')} /></main>
@@ -172,6 +182,14 @@ export default function Aluna({ perfil }) {
         <span><i className="pt feito" />Feito</span>
         <span><i className="pt falta" />Não feito</span>
       </div>
+
+      {seqN > 0 && (
+        <button className="linha-sec" onClick={() => setTela('alongamentos')}>
+          <span className="ico"><Icone nome="alongar" tam={22} /></span>
+          <span className="grow"><strong>Alongamentos e Flexibilidade</strong><span className="muted bl">Para fazer antes do treino</span></span>
+          <Icone nome="chevron" tam={16} />
+        </button>
+      )}
 
       <div className="atalhos">
         <button className="atalho" onClick={() => setTela('historico')}>

@@ -1,0 +1,23 @@
+/* Alongamentos e Flexibilidade */
+.linha-sec {
+  display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 20px; padding: 12px 14px; text-align: left;
+  background: var(--card); border: 1px solid var(--borda); border-radius: var(--r-card); color: var(--txt); font-size: 15px; cursor: pointer;
+  transition: border-color .16s ease, background .16s ease;
+}
+.linha-sec:hover { border-color: var(--verde2); background: #1e2b2c; }
+.linha-sec .ico { width: 40px; height: 40px; flex: none; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: rgba(32, 178, 170, .15); color: var(--verde2); }
+
+.along-item { background: var(--card); border: 1px solid var(--borda); border-radius: var(--r-card); margin: 10px 0; padding: 10px 12px; transition: border-color .16s ease; }
+.along-item.ok { border-color: rgba(32, 178, 170, .45); }
+.along-topo { display: flex; align-items: center; gap: 12px; }
+.along-topo .chk { width: 48px; height: 48px; flex: none; }
+.along-nome { flex: 1; min-width: 0; text-align: left; background: none; border: 0; color: var(--txt); font-size: 15px; cursor: pointer; padding: 6px 0; }
+.along-item .chev { color: var(--txt2); transition: transform .16s ease; display: flex; }
+.along-item.aberto .chev { transform: rotate(90deg); }
+.along-corpo { padding-top: 8px; }
+
+.acesso-linha { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--borda); cursor: pointer; }
+.acesso-linha input[type='checkbox'] { width: 22px; height: 22px; margin: 0; padding: 0; accent-color: var(--verde2); flex: none; }
+
+/* Menu do admin com três abas: em telas estreitas, só o texto */
+@media (max-width: 440px) { nav button svg { display: none; } nav button { font-size: 14px; padding: 0 4px; } }
