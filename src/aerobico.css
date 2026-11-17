@@ -1,0 +1,11 @@
+/* Aeróbico */
+.relogio { font-size: 60px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; margin: 6px 0; font-variant-numeric: tabular-nums; }
+.aero-barra { background: rgba(255, 255, 255, .25); margin: 12px 0 4px; }
+.aero-barra > span { background: #fff; }
+.aero-acoes { display: flex; gap: 10px; }
+.aero-acoes .btn { flex: 1; width: auto; margin-top: 16px; }
+.pse-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 10px 0 6px; }
+.pse-grid button { min-height: 48px; border-radius: var(--r-ctl); border: 1.5px solid var(--borda2); background: transparent; color: var(--txt2); font-size: 17px; font-weight: 800; cursor: pointer; transition: all .16s ease; }
+.pse-grid button:hover { border-color: var(--verde2); }
+.pse-grid button.on { background: var(--verde); border-color: var(--verde); color: #fff; }
+.pse-rotulo { min-height: 26px; margin: 4px 0 10px; font-weight: 700; color: var(--verde2); }

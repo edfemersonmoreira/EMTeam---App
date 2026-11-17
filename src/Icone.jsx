@@ -10,6 +10,7 @@ const P = {
   chevron: <path d="M9 5l7 7-7 7" />,
   voltar: <path d="M19 12H5M11 6l-6 6 6 6" />,
   mais: <path d="M12 5v14M5 12h14" />,
+  coracao: <path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0112 7.3a4.3 4.3 0 017.5 2.5C19.5 15.4 12 20 12 20z" />,
   alongar: <><circle cx="12" cy="4.5" r="2" /><path d="M4 9l8 2 8-2M12 11v5M8 21l4-5 4 5" /></>,
 }
 

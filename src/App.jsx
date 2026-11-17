@@ -5,6 +5,7 @@ import Alunas from './Alunas'
 import Fichas from './Fichas'
 import Historico from './Historico'
 import Alongamentos from './Alongamentos'
+import AerobicoAdmin from './AerobicoAdmin'
 import Icone from './Icone'
 import Aluna from './Aluna'
 import Senha from './Senha'
@@ -39,6 +40,7 @@ export default function App() {
   const [aba, setAba] = useState('alunas')
   const [alunaSel, setAlunaSel] = useState(null)
   const [evolSel, setEvolSel] = useState(null)
+  const [aeroSel, setAeroSel] = useState(null)
   const [senhaAberta, setSenhaAberta] = useState(false)
 
   useEffect(() => {
@@ -58,7 +60,7 @@ export default function App() {
   if (!perfil) return <p className="center">Carregando…</p>
 
   const admin = perfil.papel === 'admin'
-  const irPara = a => { setAba(a); setAlunaSel(null); setEvolSel(null) }
+  const irPara = a => { setAba(a); setAlunaSel(null); setEvolSel(null); setAeroSel(null) }
 
   let conteudo
   if (senhaAberta) {
@@ -74,9 +76,10 @@ export default function App() {
         <main className="wide">
           {aba === 'alongamentos' ? <Alongamentos />
             : aba === 'exercicios' ? <Exercicios />
+            : aeroSel ? <AerobicoAdmin aluna={aeroSel} onVoltar={() => setAeroSel(null)} />
             : alunaSel ? <Fichas aluna={alunaSel} onVoltar={() => setAlunaSel(null)} />
             : evolSel ? <Historico alunaId={evolSel.id} titulo={`Evolução de ${evolSel.nome}`} onVoltar={() => setEvolSel(null)} />
-            : <Alunas onFichas={setAlunaSel} onEvolucao={setEvolSel} />}
+            : <Alunas onFichas={setAlunaSel} onEvolucao={setEvolSel} onAerobico={setAeroSel} />}
         </main>
       </>
     )

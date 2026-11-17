@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import Executar from './Executar'
 import Historico from './Historico'
 import AlongAluna from './AlongAluna'
+import AerobicoAluna from './AerobicoAluna'
 import Avatar from './Avatar'
 import Icone from './Icone'
 import './along.css'
@@ -25,6 +26,7 @@ export default function Aluna({ perfil }) {
   const [exec, setExec] = useState(null)
   const [msg, setMsg] = useState('')
   const [seqN, setSeqN] = useState(0)
+  const [aero, setAero] = useState({ presc: [], ativa: false })
 
   async function carregar() {
     const f = await supabase.from('fichas').select('*').eq('aluna_id', perfil.id).eq('ativa', true).maybeSingle()
@@ -65,11 +67,19 @@ export default function Aluna({ perfil }) {
     // Alongamentos e Flexibilidade: só mostra a seção se houver sequência prescrita
     const sq = await supabase.from('sequencias_alongamento').select('id', { count: 'exact', head: true }).eq('ativa', true).eq('modelo', false)
     setSeqN(sq.error ? 0 : (sq.count || 0))
+
+    // Aeróbico: mostra a seção se houver prescrição ativa ou atividade em andamento
+    const pr = await supabase.from('aerobico_prescricoes').select('modalidade, tempo_previsto_min').eq('aluna_id', perfil.id).eq('ativa', true)
+    const at = await supabase.from('aerobico_registros').select('id').eq('aluna_id', perfil.id).in('status', ['em_andamento', 'pausada']).limit(1)
+    setAero({ presc: pr.error ? [] : (pr.data || []), ativa: !at.error && (at.data || []).length > 0 })
   }
   useEffect(() => { carregar() }, [])
 
   if (exec) {
     return <Executar treino={exec} perfil={perfil} onSair={() => { setExec(null); setEscolher(false); carregar() }} />
+  }
+  if (tela === 'aerobico') {
+    return <main><AerobicoAluna perfil={perfil} onVoltar={() => { setTela('home'); carregar() }} /></main>
   }
   if (tela === 'alongamentos') {
     return <main><AlongAluna perfil={perfil} onVoltar={() => { setTela('home'); carregar() }} /></main>
@@ -187,6 +197,21 @@ export default function Aluna({ perfil }) {
         <button className="linha-sec" onClick={() => setTela('alongamentos')}>
           <span className="ico"><Icone nome="alongar" tam={22} /></span>
           <span className="grow"><strong>Alongamentos e Flexibilidade</strong><span className="muted bl">Para fazer antes do treino</span></span>
+          <Icone nome="chevron" tam={16} />
+        </button>
+      )}
+
+      {(aero.presc.length > 0 || aero.ativa) && (
+        <button className="linha-sec" style={{ marginTop: 10 }} onClick={() => setTela('aerobico')}>
+          <span className="ico"><Icone nome="coracao" tam={22} /></span>
+          <span className="grow">
+            <strong>Aeróbico</strong>
+            <span className="muted bl">
+              {aero.ativa ? 'Atividade em andamento'
+                : aero.presc.length === 1 ? `${aero.presc[0].modalidade}${aero.presc[0].tempo_previsto_min ? `, ${aero.presc[0].tempo_previsto_min} min` : ''}`
+                : `${aero.presc.length} prescrições`}
+            </span>
+          </span>
           <Icone nome="chevron" tam={16} />
         </button>
       )}
