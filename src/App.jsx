@@ -7,6 +7,7 @@ import Historico from './Historico'
 import Alongamentos from './Alongamentos'
 import AerobicoAdmin from './AerobicoAdmin'
 import Modelos from './Modelos'
+import Inicio from './Inicio'
 import Icone from './Icone'
 import Aluna from './Aluna'
 import Senha from './Senha'
@@ -40,11 +41,12 @@ function Login({ aviso }) {
 export default function App() {
   const [session, setSession] = useState(undefined)
   const [perfil, setPerfil] = useState(null)
-  const [aba, setAba] = useState('alunas')
+  const [aba, setAba] = useState('inicio')
   const [alunaSel, setAlunaSel] = useState(null)
   const [evolSel, setEvolSel] = useState(null)
   const [aeroSel, setAeroSel] = useState(null)
   const [senhaAberta, setSenhaAberta] = useState(false)
+  const [deInicio, setDeInicio] = useState(false)   // aluna/ficha aberta a partir de uma notificação: "Voltar" retorna ao Início
   const [aviso, setAviso] = useState('')
   const [erroPerfil, setErroPerfil] = useState('')
   const [tentativa, setTentativa] = useState(0)
@@ -88,7 +90,13 @@ export default function App() {
   if (!perfil) return <p className="center">Carregando…</p>
 
   const admin = perfil.papel === 'admin'
-  const irPara = a => { setAba(a); setAlunaSel(null); setEvolSel(null); setAeroSel(null) }
+  const irPara = a => { setAba(a); setAlunaSel(null); setEvolSel(null); setAeroSel(null); setDeInicio(false) }
+  // Abre a ficha ou a evolução de uma aluna direto de uma notificação do Início
+  const abrirAluna = (tipo, aluna) => {
+    setAba('alunas'); setAlunaSel(null); setEvolSel(null); setAeroSel(null); setDeInicio(true)
+    if (tipo === 'fichas') setAlunaSel(aluna); else setEvolSel(aluna)
+  }
+  const voltar = limpar => () => { limpar(); if (deInicio) { setAba('inicio'); setDeInicio(false) } }
 
   let conteudo
   if (senhaAberta) {
@@ -97,20 +105,23 @@ export default function App() {
     conteudo = (
       <>
         <nav>
+          <button className={aba === 'inicio' ? 'on' : ''} onClick={() => irPara('inicio')}>Início</button>
           <button className={aba === 'alunas' ? 'on' : ''} onClick={() => irPara('alunas')}>Alunas</button>
           <button className={aba === 'exercicios' ? 'on' : ''} onClick={() => irPara('exercicios')}>Exercícios</button>
           <button className={aba === 'modelos' ? 'on' : ''} onClick={() => irPara('modelos')}>Modelos</button>
           <button className={aba === 'alongamentos' ? 'on' : ''} onClick={() => irPara('alongamentos')}><Icone nome="alongar" tam={18} />Alongamentos</button>
         </nav>
+        {aba === 'inicio' ? <Inicio perfil={perfil} irPara={irPara} abrirAluna={abrirAluna} /> : (
         <main className="wide">
           {aba === 'alongamentos' ? <Alongamentos />
             : aba === 'modelos' ? <Modelos />
             : aba === 'exercicios' ? <Exercicios />
             : aeroSel ? <AerobicoAdmin aluna={aeroSel} onVoltar={() => setAeroSel(null)} />
-            : alunaSel ? <Fichas aluna={alunaSel} onVoltar={() => setAlunaSel(null)} />
-            : evolSel ? <Historico alunaId={evolSel.id} titulo={`Evolução de ${evolSel.nome}`} onVoltar={() => setEvolSel(null)} />
+            : alunaSel ? <Fichas aluna={alunaSel} onVoltar={voltar(() => setAlunaSel(null))} />
+            : evolSel ? <Historico alunaId={evolSel.id} titulo={`Evolução de ${evolSel.nome}`} onVoltar={voltar(() => setEvolSel(null))} />
             : <Alunas onFichas={setAlunaSel} onEvolucao={setEvolSel} onAerobico={setAeroSel} />}
         </main>
+        )}
       </>
     )
   } else if (perfil.ativa === false) {
