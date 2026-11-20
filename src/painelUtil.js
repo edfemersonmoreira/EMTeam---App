@@ -1,10 +1,10 @@
 // Regras do painel inicial do administrador. Só funções puras (sem acesso ao banco), para ficarem testáveis.
 // Tudo aqui trabalha com dados reais lidos do banco; nada é inventado.
 
-// A ficha não tem campo de validade. O lembrete usa a idade da ficha ativa (data em que ela foi criada).
-// Ajuste os dois números conforme o seu ciclo de reavaliação.
-export const FICHA_AVISO_DIAS = 35     // "em breve": a ficha está perto de completar o ciclo
-export const FICHA_ATRASO_DIAS = 42    // "atualizar": a ficha passou do ciclo
+// Validade da ficha: definida ao criar ou copiar (padrão 5 semanas) e guardada em fichas.validade_em (data).
+// Fichas antigas, sem validade gravada, usam o padrão: data de criação + 5 semanas.
+export const VALIDADE_PADRAO_SEMANAS = 5
+export const AVISO_ANTES_DIAS = 7      // lembrete "perto de vencer": faltam 7 dias ou menos
 export const JANELA_CONCLUIDOS_DIAS = 7
 
 const MS_DIA = 86400000
@@ -63,22 +63,48 @@ export function marcarVistos(itens, vistos, chaves) {
   return novo
 }
 
+// ---- Validade da ficha (datas "só dia", no fuso do aparelho) ----
+const meiaNoite = d => new Date(d.getFullYear(), d.getMonth(), d.getDate())
+const dataLocal = txt => { const [a, m, d] = String(txt).slice(0, 10).split('-').map(Number); return new Date(a, m - 1, d) }
+const txtData = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+// Data de vencimento (AAAA-MM-DD) para uma validade em semanas, contando a partir de hoje.
+export function dataValidade(semanas, hoje = new Date()) {
+  const n = Math.round(Number(semanas))
+  const s = Number.isFinite(n) && n >= 1 ? Math.min(n, 104) : VALIDADE_PADRAO_SEMANAS
+  const d = meiaNoite(hoje); d.setDate(d.getDate() + s * 7)
+  return txtData(d)
+}
+
+// Vencimento da ficha: o gravado ou, nas fichas antigas, criação + 5 semanas.
+export function vencimentoDaFicha(f) {
+  if (f.validade_em) return { data: dataLocal(f.validade_em), padrao: false }
+  const d = meiaNoite(new Date(f.criado_em)); d.setDate(d.getDate() + VALIDADE_PADRAO_SEMANAS * 7)
+  return { data: d, padrao: true }
+}
+
+// Dias até vencer (negativo = já venceu).
+export const diasParaVencer = (f, agora = new Date()) => Math.round((vencimentoDaFicha(f).data - meiaNoite(agora)) / MS_DIA)
+export const fmtData = d => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
 // Lembretes sobre fichas:
 //   sem-ficha : aluna ativa sem ficha ativa
-//   atrasada  : ficha ativa com idade >= FICHA_ATRASO_DIAS
-//   em-breve  : ficha ativa com idade entre FICHA_AVISO_DIAS e FICHA_ATRASO_DIAS
+//   vencida   : ficha ativa com validade já vencida
+//   em-breve  : ficha ativa que vence nos próximos AVISO_ANTES_DIAS dias (inclui o dia do vencimento)
 // Alunas desativadas nunca geram lembrete.
 export function lembretesFichas(alunas, fichasAtivas, agora = new Date()) {
   const porAluna = Object.fromEntries((fichasAtivas || []).map(f => [f.aluna_id, f]))
   const out = []
   ;(alunas || []).filter(a => a.ativa).forEach(a => {
     const f = porAluna[a.id]
-    if (!f) { out.push({ chave: `sem|${a.id}`, nivel: 'sem-ficha', alunaId: a.id, nome: a.nome, avatar: a.avatar_url || null, dias: null, ficha: null, ordem: 0 }); return }
-    const dias = Math.floor((agora - new Date(f.criado_em)) / MS_DIA)
-    if (dias >= FICHA_ATRASO_DIAS) out.push({ chave: `ficha|${f.id}`, nivel: 'atrasada', alunaId: a.id, nome: a.nome, avatar: a.avatar_url || null, dias, ficha: f.nome, ordem: 1 })
-    else if (dias >= FICHA_AVISO_DIAS) out.push({ chave: `ficha|${f.id}`, nivel: 'em-breve', alunaId: a.id, nome: a.nome, avatar: a.avatar_url || null, dias, ficha: f.nome, ordem: 2 })
+    const base = { alunaId: a.id, nome: a.nome, avatar: a.avatar_url || null }
+    if (!f) { out.push({ ...base, chave: `sem|${a.id}`, nivel: 'sem-ficha', restam: null, ficha: null, vence: null, ordem: 0 }); return }
+    const restam = diasParaVencer(f, agora)
+    const vence = vencimentoDaFicha(f).data
+    if (restam < 0) out.push({ ...base, chave: `ficha|${f.id}`, nivel: 'vencida', restam, ficha: f.nome, vence, ordem: 1 })
+    else if (restam <= AVISO_ANTES_DIAS) out.push({ ...base, chave: `ficha|${f.id}`, nivel: 'em-breve', restam, ficha: f.nome, vence, ordem: 2 })
   })
-  return out.sort((x, y) => x.ordem - y.ordem || (y.dias ?? 0) - (x.dias ?? 0) || x.nome.localeCompare(y.nome, 'pt-BR'))
+  return out.sort((x, y) => x.ordem - y.ordem || (x.restam ?? 0) - (y.restam ?? 0) || x.nome.localeCompare(y.nome, 'pt-BR'))
 }
 
 export function resumoAlunas(alunas) {

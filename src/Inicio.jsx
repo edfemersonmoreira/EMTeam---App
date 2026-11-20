@@ -3,8 +3,8 @@ import { supabase } from './supabase'
 import Icone from './Icone'
 import './painel.css'
 import {
-  agruparConcluidos, ehNovo, marcarVistos, lembretesFichas, resumoAlunas, rotuloQuando, primeiroNome, plural,
-  FICHA_AVISO_DIAS, FICHA_ATRASO_DIAS, JANELA_CONCLUIDOS_DIAS,
+  agruparConcluidos, ehNovo, marcarVistos, lembretesFichas, resumoAlunas, rotuloQuando, primeiroNome, plural, fmtData,
+  JANELA_CONCLUIDOS_DIAS,
 } from './painelUtil'
 
 const CHAVE_VISTOS = 'emteam-admin-vistos'
@@ -12,6 +12,13 @@ const lerVistos = () => { try { return JSON.parse(localStorage.getItem(CHAVE_VIS
 const gravarVistos = v => { try { localStorage.setItem(CHAVE_VISTOS, JSON.stringify(v)) } catch { /* sem armazenamento: vale só nesta sessão */ } }
 const iniciais = n => (n || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()
 const LIMITE = 6
+
+// Antes de a coluna validade_em existir no banco, a consulta cai para o formato antigo (as fichas usam o prazo padrão de 5 semanas).
+async function buscarFichasAtivas() {
+  const r = await supabase.from('fichas').select('id, aluna_id, nome, criado_em, validade_em').eq('ativa', true)
+  if (!r.error) return r
+  return supabase.from('fichas').select('id, aluna_id, nome, criado_em').eq('ativa', true)
+}
 
 function Foto({ nome, url }) {
   return (
@@ -36,7 +43,7 @@ export default function Inicio({ perfil, irPara, abrirAluna }) {
         .not('finalizada_em', 'is', null).gte('finalizada_em', desde).order('finalizada_em', { ascending: false }).limit(200),
       supabase.from('aerobico_registros').select('id, aluna_id, modalidade, finalizada_em, duracao_seg, pse')
         .eq('status', 'finalizada').not('finalizada_em', 'is', null).gte('finalizada_em', desde).order('finalizada_em', { ascending: false }).limit(200),
-      supabase.from('fichas').select('id, aluna_id, nome, criado_em').eq('ativa', true),
+      buscarFichasAtivas(),
       supabase.from('exercicios').select('id, ativo'),
       supabase.from('modelos').select('id', { count: 'exact', head: true }),
       supabase.from('alongamentos').select('id, ativo'),
@@ -147,7 +154,7 @@ export default function Inicio({ perfil, irPara, abrirAluna }) {
           <div className="painel-cab">
             <h3 id="t-fichas"><Icone nome="modelos" tam={18} /> Fichas e pendências</h3>
           </div>
-          <div className="muted pequeno">Alunas sem ficha e fichas com {FICHA_AVISO_DIAS}+ dias</div>
+          <div className="muted pequeno">Alunas sem ficha e fichas vencidas ou perto de vencer</div>
           {!dados && <p className="painel-vazio">Carregando…</p>}
           {dados && !dados.lembretesOk && <p className="painel-vazio">Não foi possível carregar as fichas.</p>}
           {dados && dados.lembretesOk && dados.lembretes.length === 0 && (
@@ -159,12 +166,13 @@ export default function Inicio({ perfil, irPara, abrirAluna }) {
               <span className="notif-txt">
                 <span className="notif-t"><strong>{l.nome}</strong></span>
                 <span className="notif-d">
-                  {l.nivel === 'sem-ficha' ? 'Sem ficha ativa' : `${l.ficha}, criada há ${plural(l.dias, 'dia', 'dias')}`}
+                  {l.nivel === 'sem-ficha' ? 'Sem ficha ativa'
+                    : `${l.ficha} · ${l.restam < 0 ? `venceu há ${plural(-l.restam, 'dia', 'dias')}` : l.restam === 0 ? 'vence hoje' : `vence em ${plural(l.restam, 'dia', 'dias')}`} (${fmtData(l.vence).slice(0, 5)})`}
                 </span>
               </span>
               <span className="notif-q">
                 <em className={'pilula ' + l.nivel}>
-                  {l.nivel === 'sem-ficha' ? 'Criar ficha' : l.nivel === 'atrasada' ? 'Atualizar' : 'Em breve'}
+                  {l.nivel === 'sem-ficha' ? 'Criar ficha' : l.nivel === 'vencida' ? 'Vencida' : 'Vence em breve'}
                 </em>
               </span>
             </button>
