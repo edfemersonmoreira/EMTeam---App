@@ -47,7 +47,7 @@
 .legenda .pt.feito { background: var(--verde2); }
 .legenda .pt.plan { background: transparent; border: 1.5px solid var(--txt2); }
 .legenda .pt.falta { background: var(--borda2); }
-.legenda .pt.descanso { background: transparent; border: 1.5px dashed var(--borda2); }
+.legenda .pt.sem { background: transparent; border: 1.5px dashed var(--borda2); }
 
 .atalhos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
 .atalho {

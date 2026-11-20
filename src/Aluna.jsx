@@ -201,7 +201,7 @@ export default function Aluna({ perfil }) {
         <span><i className="pt plan" />Programado</span>
         <span><i className="pt feito" />Feito</span>
         <span><i className="pt falta" />Não realizado</span>
-        <span><i className="pt descanso" />Descanso</span>
+        <span><i className="pt sem" />Descanso</span>
       </div>
 
       {seqN > 0 && (
