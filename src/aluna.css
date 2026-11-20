@@ -14,8 +14,8 @@
 .bloco .linha-prev { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, .25); font-size: 14px; }
 .bloco .mais { padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, .25); }
 .bloco .btn { width: 100%; margin-top: 16px; min-height: 52px; background: var(--bg); color: var(--txt); }
-.bloco .btn:hover { background: #0b1112; }
-.bloco.calmo { background: var(--card); border: 1px solid var(--borda); color: var(--txt); }
+.bloco .btn:hover { background: var(--btn-bloco-hover); }
+.bloco.calmo { border: 1px solid var(--borda); color: var(--txt); }
 .bloco.calmo h3 { margin: 0 0 6px; font-size: 20px; }
 .bloco.calmo p { margin: 0; }
 
@@ -26,16 +26,16 @@
   transition: background .16s ease;
 }
 .linha-ex:last-child { border-bottom: 0; }
-.linha-ex:hover { background: #1e2b2c; }
+.linha-ex:hover { background: var(--hover); }
 .num { width: 32px; height: 32px; flex: none; border-radius: 50%; border: 1px solid var(--borda2); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: var(--txt2); }
-.num.ok { background: var(--verde2); border-color: var(--verde2); color: var(--bg); }
+.num.ok { background: var(--verde2); border-color: var(--verde2); color: var(--on-acento); }
 
 .semana { display: flex; justify-content: space-between; gap: 4px; margin-top: 22px; }
 .dia-sem { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0; background: none; border: 0; color: var(--txt2); font-size: 12px; font-weight: 700; cursor: pointer; }
 .dia-sem:disabled { cursor: default; }
 .dia-sem .bola { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1.5px dashed var(--borda); transition: border-color .16s ease, transform .1s; }
 .dia-sem.plan .bola { border: 1.5px solid var(--txt2); color: var(--txt); }
-.dia-sem.feito .bola { background: var(--verde2); border: 1.5px solid var(--verde2); color: var(--bg); }
+.dia-sem.feito .bola { background: var(--verde2); border: 1.5px solid var(--verde2); color: var(--on-acento); }
 .dia-sem.falta .bola { background: var(--card); border: 1.5px solid var(--borda2); color: var(--txt2); }   /* neutro: sem vermelho e sem símbolo de erro */
 .dia-sem.hoje { color: var(--txt); }
 .dia-sem.hoje .bola { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--verde2); }
@@ -52,11 +52,11 @@
 .atalhos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
 .atalho {
   display: flex; flex-direction: column; justify-content: space-between; gap: 18px; min-height: 96px; padding: 14px; text-align: left; text-decoration: none;
-  background: var(--card); border: 1px solid var(--borda); border-radius: var(--r-card); color: var(--txt); font-size: 14px; font-weight: 700; cursor: pointer;
+  border: 1px solid var(--borda); border-radius: var(--r-card); color: var(--txt); font-size: 14px; font-weight: 700; cursor: pointer;
   transition: border-color .16s ease, background .16s ease;
 }
-.atalho svg { color: var(--verde2); }
-.atalho:hover { border-color: var(--verde2); background: #1e2b2c; }
+.atalho svg { color: var(--ico); }
+.atalho:hover { border-color: var(--verde2); }
 
 /* Execução do treino */
 .topo-exec { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
@@ -76,7 +76,7 @@
 .chk { height: 52px; border-radius: var(--r-ctl); border: 1.5px solid var(--borda2); background: transparent; color: var(--txt2); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .16s ease, border-color .16s ease, transform .1s; }
 .chk:hover { border-color: var(--verde2); }
 .chk:active { transform: scale(.95); }
-.chk.on { background: var(--verde2); border-color: var(--verde2); color: var(--bg); }
+.chk.on { background: var(--verde2); border-color: var(--verde2); color: var(--on-acento); }
 .acoes-exec { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; }
 .descanso {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; justify-content: space-between; align-items: center;

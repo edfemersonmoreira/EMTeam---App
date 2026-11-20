@@ -5,14 +5,15 @@ import Alunas from './Alunas'
 import Fichas from './Fichas'
 import Historico from './Historico'
 import Alongamentos from './Alongamentos'
-import Modelos from './Modelos'
 import AerobicoAdmin from './AerobicoAdmin'
+import Modelos from './Modelos'
 import Icone from './Icone'
 import Aluna from './Aluna'
 import Senha from './Senha'
 import Logo from './Logo'
+import TemaBotao from './TemaBotao'
 
-function Login() {
+function Login({ aviso }) {
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [erro, setErro] = useState('')
@@ -29,6 +30,7 @@ function Login() {
         <input type="email" placeholder="E-mail" value={email} onChange={e => setEmail(e.target.value)} required />
         <input type="password" placeholder="Senha" value={senha} onChange={e => setSenha(e.target.value)} required />
         {erro && <p className="erro">{erro}</p>}
+        {aviso && !erro && <p className="muted">{aviso}</p>}
         <button className="btn">Entrar</button>
       </form>
     </div>
@@ -43,6 +45,9 @@ export default function App() {
   const [evolSel, setEvolSel] = useState(null)
   const [aeroSel, setAeroSel] = useState(null)
   const [senhaAberta, setSenhaAberta] = useState(false)
+  const [aviso, setAviso] = useState('')
+  const [erroPerfil, setErroPerfil] = useState('')
+  const [tentativa, setTentativa] = useState(0)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -50,14 +55,36 @@ export default function App() {
     return () => sub.subscription.unsubscribe()
   }, [])
 
+  // A sessão do Supabase Auth já fica guardada no aparelho e é renovada sozinha. Aqui só tratamos o caso
+  // de a conta não existir mais ou a sessão ser inválida (volta para o login) e o de falha de conexão
+  // (mantém a sessão e oferece tentar de novo, sem desconectar a aluna).
   useEffect(() => {
-    if (!session) { setPerfil(null); return }
-    supabase.from('profiles').select('*').eq('id', session.user.id).single()
-      .then(({ data }) => setPerfil(data))
-  }, [session])
+    if (!session) { setPerfil(null); setErroPerfil(''); return }
+    let vivo = true
+    supabase.from('profiles').select('*').eq('id', session.user.id).single().then(({ data, error }) => {
+      if (!vivo) return
+      if (error || !data) {
+        const invalida = error && (error.code === 'PGRST116' || /jwt|token/i.test(error.message || ''))
+        if (invalida) { supabase.auth.signOut(); setAviso('Sua sessão não é mais válida. Entre novamente.') }
+        else setErroPerfil('Não foi possível carregar seus dados. Verifique a conexão.')
+        return
+      }
+      setErroPerfil(''); setAviso(''); setPerfil(data)
+    })
+    return () => { vivo = false }
+  }, [session, tentativa])
 
   if (session === undefined) return <p className="center">Carregando…</p>
-  if (!session) return <Login />
+  if (!session) return <Login aviso={aviso} />
+  if (!perfil && erroPerfil) {
+    return (
+      <div className="login">
+        <p className="muted">{erroPerfil}</p>
+        <button className="btn" onClick={() => { setErroPerfil(''); setTentativa(t => t + 1) }}>Tentar de novo</button>
+        <button className="link-texto" onClick={() => supabase.auth.signOut()}>Sair</button>
+      </div>
+    )
+  }
   if (!perfil) return <p className="center">Carregando…</p>
 
   const admin = perfil.papel === 'admin'
@@ -77,8 +104,8 @@ export default function App() {
         </nav>
         <main className="wide">
           {aba === 'alongamentos' ? <Alongamentos />
-            : aba === 'exercicios' ? <Exercicios />
             : aba === 'modelos' ? <Modelos />
+            : aba === 'exercicios' ? <Exercicios />
             : aeroSel ? <AerobicoAdmin aluna={aeroSel} onVoltar={() => setAeroSel(null)} />
             : alunaSel ? <Fichas aluna={alunaSel} onVoltar={() => setAlunaSel(null)} />
             : evolSel ? <Historico alunaId={evolSel.id} titulo={`Evolução de ${evolSel.nome}`} onVoltar={() => setEvolSel(null)} />
@@ -96,7 +123,8 @@ export default function App() {
     <div className="app">
       <header>
         <Logo />
-        <span>
+        <span className="cab-acoes">
+          <TemaBotao />
           <button className="link" onClick={() => setSenhaAberta(true)}>Senha</button>
           {' · '}
           <button className="link" onClick={() => supabase.auth.signOut()}>Sair</button>

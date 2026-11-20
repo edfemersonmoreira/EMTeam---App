@@ -5,7 +5,7 @@
   border: 1px solid var(--borda2); background: var(--card); color: var(--txt); font-size: 12px; font-weight: 800;
   border: 1px solid color-mix(in srgb, var(--cat, #20B2AA) 55%, transparent);
   background: color-mix(in srgb, var(--cat, #20B2AA) 14%, transparent);
-  color: var(--cat, #20B2AA);
+  color: color-mix(in srgb, var(--cat, #20B2AA) var(--cat-pct), #101617);
 }
 
 /* Editor de fichas */
@@ -24,7 +24,7 @@
 /* Execução do treino: cada bloco tem a cor da sua categoria */
 .bloco-exec { margin-top: 18px; padding-left: 12px; border-left: 3px solid var(--cat, var(--verde2)); }
 .bloco-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-bottom: 4px; }
-.bloco-exec .serie .n { color: var(--cat, var(--txt2)); }
-.bloco-exec .chk.on { background: var(--cat, var(--verde2)); border-color: var(--cat, var(--verde2)); }
+.bloco-exec .serie .n { color: color-mix(in srgb, var(--cat, var(--txt2)) var(--cat-pct), #101617); }
+.bloco-exec .chk.on { background: var(--cat, var(--verde2)); border-color: var(--cat, var(--verde2)); color: #101617; }
 .cat-dots { display: inline-flex; gap: 4px; margin-left: 8px; vertical-align: middle; }
 .cat-dots .cat-dot { width: 7px; height: 7px; }

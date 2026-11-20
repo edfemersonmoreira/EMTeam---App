@@ -4,6 +4,11 @@
 header .logo { height: 28px; }
 .logo-marca { position: relative; width: min(300px, calc((min(100vw, 360px) - 32px) * .74)); margin: 0 auto 26px; }
 .logo.grande { display: block; height: auto; width: 100%; margin: 0; position: relative; }
+/* Logo empilhada: duas versões (o slogan muda de cor); aparece a do tema atual */
+.logo.grande.so-claro { display: none; }
+:root[data-tema='claro'] .logo.grande.so-claro { display: block; }
+:root[data-tema='claro'] .logo.grande.so-escuro { display: none; }
+:root[data-tema='claro'] .logo-marca::before { opacity: .6; }
 /* Anilha atrás da logo: centrada no quadro da logo (49% da altura, o centro visual: as letras pesam um pouco mais no alto) e proporcional à largura dela */
 .logo-marca::before {
   content: ''; position: absolute; left: 50%; top: 49%; width: 180%; aspect-ratio: 1; transform: translate(-50%, -50%); z-index: -1; pointer-events: none;
@@ -14,8 +19,8 @@ header .logo { height: 28px; }
 body:has(.login) {
   background-color: var(--bg);
   background-image:
-    linear-gradient(180deg, rgba(16, 22, 23, 1) 0%, rgba(16, 22, 23, 0) 28%, rgba(16, 22, 23, 0) 62%, rgba(16, 22, 23, 1) 100%),
-    url(/padrao-em.svg);
+    linear-gradient(180deg, rgb(var(--bg-rgb) / 1) 0%, rgb(var(--bg-rgb) / 0) 28%, rgb(var(--bg-rgb) / 0) 62%, rgb(var(--bg-rgb) / 1) 100%),
+    var(--pad);
   background-size: auto, 144px 80px;
   background-repeat: no-repeat, repeat;
 }
@@ -25,13 +30,17 @@ body:has(.login) {
   background-image: radial-gradient(circle at 108% -14%, transparent 0 118px, rgba(255, 255, 255, .13) 118px 130px, transparent 130px 148px, rgba(255, 255, 255, .10) 148px 151px, transparent 151px 174px, rgba(255, 255, 255, .07) 174px 176px, transparent 176px);
 }
 
-/* Estados vazios (sem ficha, dia de descanso): padrão EM tom sobre tom */
-.bloco.calmo {
-  background-image: linear-gradient(90deg, var(--card) 38%, rgba(25, 35, 36, 0) 100%), url(/padrao-em-card.svg);
+/* Padrão EM tom sobre tom (letras originais da logo): estados vazios e atalhos clicáveis.
+   Mesma composição em todos: fundo do card + desvanecido à esquerda (texto/ícone limpos) + padrão no canto superior direito. */
+.bloco.calmo, .linha-sec, .atalho {
+  --sup: var(--card);
+  background-color: var(--sup);
+  background-image: linear-gradient(90deg, var(--sup) 38%, transparent 100%), var(--pad-card);
   background-size: auto, 144px 80px;
   background-repeat: no-repeat, repeat;
   background-position: 0 0, right top;
 }
+.linha-sec:hover, .atalho:hover { --sup: var(--hover); }
 
 /* Foto da aluna: segundo anel fino, como uma anilha */
 .avatar { box-shadow: 0 0 0 3px var(--bg), 0 0 0 4.5px rgba(32, 178, 170, .45); }

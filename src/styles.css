@@ -2,8 +2,19 @@
   --bg: #101617; --bg2: #141D1E; --card: #192324; --borda: #263536; --borda2: #3a4d4e;
   --verde: #008080; --verde2: #20B2AA; --txt: #F2F5F5; --txt2: #9BAAAA;
   --vermelho: #E5635F; --erro: #ff8f86;
+  --hover: #1e2b2c; --btn-bloco-hover: #0b1112; --bg-rgb: 16 22 23; --ico: #20B2AA; --on-acento: var(--bg); --cat-pct: 100%;
+  --pad: url(/padrao-em.svg); --pad-card: url(/padrao-em-card.svg);
   --r-bloco: 24px; --r-card: 16px; --r-ctl: 12px; --ease: .16s ease;
   color-scheme: dark;
+}
+/* Tema claro: mesma paleta da marca (verde petróleo e verde-água), com o verde de texto mais escuro para manter o contraste sobre fundo claro. */
+:root[data-tema='claro'] {
+  --bg: #F3F6F6; --bg2: #E9EFEF; --card: #FFFFFF; --borda: #D2DDDD; --borda2: #AFC0C0;
+  --verde: #008080; --verde2: #006F6F; --txt: #101617; --txt2: #4B5F60;
+  --vermelho: #C0392B; --erro: #B3261E;
+  --hover: #EEF4F4; --btn-bloco-hover: #E3ECEC; --bg-rgb: 243 246 246; --on-acento: #fff; --cat-pct: 55%;
+  --pad: url(/padrao-em-claro.svg); --pad-card: url(/padrao-em-card-claro.svg);
+  color-scheme: light;
 }
 * { box-sizing: border-box; scrollbar-color: var(--borda) transparent; }
 html { -webkit-text-size-adjust: 100%; }
@@ -24,6 +35,9 @@ header {
   padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px; background: var(--bg); border-bottom: 1px solid var(--borda);
 }
 header .link { font-size: 14px; }
+.cab-acoes { display: flex; align-items: center; gap: 8px; }
+.tema-btn { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin-right: 4px; }
+@media (max-width: 360px) { header { gap: 8px; } .cab-acoes { gap: 4px; } .tema-btn { width: 28px; margin-right: 0; } }
 .logo { height: 36px; width: auto; display: block; }
 .logo.grande { height: auto; width: 78%; max-width: 280px; margin: 0 auto 22px; }
 .marca { font-weight: 800; font-size: 19px; letter-spacing: -.01em; }
