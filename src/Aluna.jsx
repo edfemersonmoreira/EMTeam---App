@@ -8,6 +8,7 @@ import Avatar from './Avatar'
 import Icone from './Icone'
 import './along.css'
 import { WHATSAPP } from './config'
+import CategoriaTreino from './CategoriaTreino'
 
 const ABREV = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 const chaveDia = d => d.toLocaleDateString('sv-SE')
@@ -37,7 +38,10 @@ export default function Aluna({ perfil }) {
         .select('*, treino_exercicios(id, ordem, series, repeticoes, exercicios(nome, grupo_muscular))')
         .eq('ficha_id', f.data.id).order('ordem')
       if (t.error) return setMsg(t.error.message)
-      setTreinos(t.data)
+      // Tipo do treino (superiores/inferiores). Se a migração da Etapa 8 ainda não foi rodada, a tabela não existe e os treinos aparecem sem ícone.
+      const ct = await supabase.from('categorias_treino').select('*')
+      const mapaCat = Object.fromEntries((ct.error ? [] : ct.data).map(c => [c.id, c]))
+      setTreinos(t.data.map(x => ({ ...x, categoria: x.categoria_id ? (mapaCat[x.categoria_id] || null) : null })))
     } else {
       setTreinos([])
     }
@@ -130,7 +134,7 @@ export default function Aluna({ perfil }) {
     const resto = ex.length - 3
     bloco = (
       <div className="bloco">
-        <div className="data">{concluidoHoje ? 'Concluído hoje' : (temPlano ? `Hoje, ${diaNome}` : 'Próximo treino')}</div>
+        <div className="data topo-cat"><span>{concluidoHoje ? 'Concluído hoje' : (temPlano ? `Hoje, ${diaNome}` : 'Próximo treino')}</span><CategoriaTreino categoria={treinoHoje.categoria} /></div>
         <h2>{treinoHoje.nome}</h2>
         <div className="previa">
           {ex.slice(0, 3).map(x => (
@@ -168,7 +172,8 @@ export default function Aluna({ perfil }) {
         <div className="lista-escolha">
           {treinos.map(t => (
             <button key={t.id} className="linha-ex" onClick={() => setExec(t)}>
-              <span className="grow"><strong>{t.nome}</strong><span className="muted bl">{t.treino_exercicios.length} exercícios</span></span>
+              {t.categoria && <span className="num cat-ico"><Icone nome={t.categoria.icone} tam={16} /></span>}
+              <span className="grow"><strong>{t.nome}</strong><span className="muted bl">{t.categoria ? `${t.categoria.nome}, ` : ''}{t.treino_exercicios.length} exercícios</span></span>
               <Icone nome="chevron" tam={16} />
             </button>
           ))}
@@ -181,8 +186,10 @@ export default function Aluna({ perfil }) {
             className={`dia-sem ${d.estado}${d.eHoje ? ' hoje' : ''}`}
             aria-label={`${ABREV[d.dow]}${d.t ? ', ' + d.t.nome : ''}${d.estado === 'feito' ? ', feito' : d.estado === 'falta' ? ', não feito' : ''}`}>
             <span className="bola">
-              {d.estado === 'feito' && <Icone nome="check" tam={16} />}
-              {d.estado === 'falta' && <Icone nome="x" tam={15} />}
+              {d.t && d.t.categoria
+                ? <Icone nome={d.t.categoria.icone} tam={16} />
+                : <>{d.estado === 'feito' && <Icone nome="check" tam={16} />}{d.estado === 'falta' && <Icone nome="x" tam={15} />}</>}
+              {d.estado === 'feito' && d.t && d.t.categoria && <span className="selo"><Icone nome="check" tam={9} /></span>}
             </span>
             {ABREV[d.dow]}
           </button>

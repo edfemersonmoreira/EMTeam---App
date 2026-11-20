@@ -1,4 +1,5 @@
 import Icone from './Icone'
+import './categoriaTreino.css'
 
 // Identificação discreta do tipo de treino (ícone + nome), sem depender de cor.
 export default function CategoriaTreino({ categoria, solo = false }) {

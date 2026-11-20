@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import Categorias from './Categorias'
+import Icone from './Icone'
 import './editor.css'
 
 const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
@@ -174,7 +175,7 @@ function Item({ it, i, total, cats, onMove, onRemove, onChange, onErro, onGerenc
   )
 }
 
-function TreinoCard({ treino, biblioteca, cats, onChange, onGerenciar }) {
+function TreinoCard({ treino, biblioteca, cats, catsTreino, onChange, onGerenciar }) {
   const items = [...(treino.treino_exercicios || [])].sort((a, b) => a.ordem - b.ordem)
   const [modo, setModo] = useState(null)
   const [busca, setBusca] = useState('')
@@ -276,6 +277,12 @@ function TreinoCard({ treino, biblioteca, cats, onChange, onGerenciar }) {
     abrirModelos()
   }
 
+  async function definirTipo(id) {
+    const { error } = await supabase.from('treinos').update({ categoria_id: id || null }).eq('id', treino.id)
+    if (error) setMsg('Não foi possível salvar o tipo do treino. Rode a migração da Etapa 8 no Supabase. ' + error.message)
+    else { setMsg(''); onChange() }
+  }
+
   const dias = treino.dias || []
   async function toggleDia(d) {
     const novo = dias.includes(d) ? dias.filter(x => x !== d) : [...dias, d].sort()
@@ -294,6 +301,17 @@ function TreinoCard({ treino, biblioteca, cats, onChange, onGerenciar }) {
         <input defaultValue={treino.nome} onBlur={renomear} style={{ fontWeight: 600 }} />
         <button className="mini" onClick={excluirTreino}>Excluir</button>
       </div>
+
+      {catsTreino.length > 0 && (
+        <div className="faixa-chips" role="group" aria-label="Tipo do treino">
+          <button type="button" className={'chip' + (!treino.categoria_id ? ' on' : '')} aria-pressed={!treino.categoria_id} onClick={() => definirTipo('')}>Sem tipo</button>
+          {catsTreino.map(c => (
+            <button key={c.id} type="button" className={'chip' + (treino.categoria_id === c.id ? ' on' : '')} aria-pressed={treino.categoria_id === c.id} onClick={() => definirTipo(c.id)}>
+              <Icone nome={c.icone} tam={14} />{c.nome}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="dias" aria-label="Dias da semana deste treino">
         {DIAS.map(([l, d, nome]) => (
@@ -370,6 +388,7 @@ export default function Editor({ ficha, onVoltar }) {
   const [treinos, setTreinos] = useState([])
   const [biblioteca, setBiblioteca] = useState([])
   const [cats, setCats] = useState([])
+  const [catsTreino, setCatsTreino] = useState([])
   const [legado, setLegado] = useState(false)
   const [gerenciar, setGerenciar] = useState(false)
   const [msg, setMsg] = useState('')
@@ -390,8 +409,13 @@ export default function Editor({ ficha, onVoltar }) {
     setCats(error ? [] : data)
   }
 
+  async function carregarCatsTreino() {   // só existe depois da migração da Etapa 8
+    const { data, error } = await supabase.from('categorias_treino').select('*').eq('ativa', true).order('ordem')
+    setCatsTreino(error ? [] : data)
+  }
+
   useEffect(() => {
-    carregar(); carregarCats()
+    carregar(); carregarCats(); carregarCatsTreino()
     supabase.from('exercicios').select('id, nome, grupo_muscular').eq('ativo', true).order('nome')
       .then(({ data }) => setBiblioteca(data || []))
   }, [])
@@ -411,7 +435,7 @@ export default function Editor({ ficha, onVoltar }) {
       {legado && <p className="erro">Para usar tipos de série (aquecimento, backoff, dropset e outros), rode a migração da Etapa 7.1 no Supabase.</p>}
       {msg && <p className="erro">{msg}</p>}
       {treinos.map(t => (
-        <TreinoCard key={t.id} treino={t} biblioteca={biblioteca} cats={legado ? [] : cats} onChange={carregar} onGerenciar={() => setGerenciar(true)} />
+        <TreinoCard key={t.id} treino={t} biblioteca={biblioteca} cats={legado ? [] : cats} catsTreino={catsTreino} onChange={carregar} onGerenciar={() => setGerenciar(true)} />
       ))}
       <button className="btn" onClick={novoTreino}>+ Novo treino</button>
     </>
