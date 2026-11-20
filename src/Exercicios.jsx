@@ -14,7 +14,7 @@ export const GRUPOS = [
   'Quadríceps', 'Posterior de coxa', 'Glúteos', 'Adutores', 'Abdutores', 'Panturrilha', 'Cardio', 'Corpo inteiro',
 ]
 
-const vazio = { nome: '', grupo_muscular: '', equipamento: '', video_url: '', orientacoes: '' }
+const vazio = { nome: '', grupo_muscular: '', video_url: '', orientacoes: '' }
 
 export default function Exercicios() {
   const [lista, setLista] = useState([])
@@ -34,7 +34,7 @@ export default function Exercicios() {
 
   async function salvar(e) {
     e.preventDefault()
-    const { id, criado_em, ativo, ...campos } = form
+    const { id, criado_em, ativo, equipamento, ...campos } = form      // equipamento não é mais usado: fica intacto no banco
     Object.keys(campos).forEach(k => { if (campos[k] === '') campos[k] = null })
     const { error } = id
       ? await supabase.from('exercicios').update(campos).eq('id', id)
@@ -67,7 +67,6 @@ export default function Exercicios() {
           <option value="">Grupo muscular</option>
           {opcoes.map(g => <option key={g} value={g}>{g}</option>)}
         </select>
-        <input placeholder="Equipamento (por exemplo, barra ou halter)" value={form.equipamento || ''} onChange={set('equipamento')} />
         <input placeholder="Link do vídeo no YouTube" value={form.video_url || ''} onChange={set('video_url')} />
         {form.video_url && !ytEmbed(form.video_url) && <p className="erro">Esse link do YouTube não foi reconhecido. Confira e tente de novo.</p>}
         {ytEmbed(form.video_url) && <iframe className="video" src={ytEmbed(form.video_url)} allowFullScreen title="Prévia do vídeo" />}
@@ -103,7 +102,7 @@ export default function Exercicios() {
           <div className="topo" style={{ cursor: 'pointer' }} onClick={() => setAberto(aberto === ex.id ? null : ex.id)}>
             <div className="grow">
               <strong>{ex.nome}</strong>
-              <div className="muted">{[ex.grupo_muscular, ex.equipamento].filter(Boolean).join(', ')}</div>
+              {ex.grupo_muscular && <div className="muted">{ex.grupo_muscular}</div>}
             </div>
             {ex.video_url && <span className="badge"><Icone nome="play" tam={12} /> Vídeo</span>}
           </div>
