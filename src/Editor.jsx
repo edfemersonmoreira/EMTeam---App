@@ -43,7 +43,8 @@ export function parseLinhas(texto, biblioteca) {
 const blocosOrdenados = it => [...(it.blocos || [])].sort((a, b) => a.ordem - b.ordem)
 
 // Um tipo de série (bloco) dentro de um exercício: categoria, séries, repetições, carga, descanso e instruções
-function Bloco({ b, i, total, cats, onMove, onRemove, onErro, onGerenciar }) {
+// Serve para fichas e para modelos: quem usa decide onde salvar, pela função onSalvar (devolve mensagem de erro ou '').
+export function Bloco({ b, i, total, cats, onSalvar, onMove, onRemove, onErro, onGerenciar }) {
   const [v, setV] = useState({
     categoria_id: b.categoria_id, series: b.series, repeticoes: b.repeticoes ?? '',
     carga: b.carga ?? '', descanso_seg: b.descanso_seg ?? '', observacao: b.observacao ?? '',
@@ -54,15 +55,15 @@ function Bloco({ b, i, total, cats, onMove, onRemove, onErro, onGerenciar }) {
   async function salvar(novo = {}) {
     const x = { ...v, ...novo }
     setV(x)
-    const { error } = await supabase.from('treino_exercicio_series').update({
+    const erro = await onSalvar({
       categoria_id: x.categoria_id,
       series: parseInt(x.series, 10) || 1,
       repeticoes: x.repeticoes || null,
       carga: x.carga || null,
       descanso_seg: x.descanso_seg === '' ? null : parseInt(x.descanso_seg, 10),
       observacao: x.observacao || null,
-    }).eq('id', b.id)
-    onErro(error ? error.message : '')
+    })
+    onErro(erro || '')
   }
   const set = c => e => setV({ ...v, [c]: e.target.value })
   const trocar = e => { if (e.target.value === '__gerenciar') return onGerenciar(); salvar({ categoria_id: e.target.value }) }
@@ -125,6 +126,10 @@ function Item({ it, i, total, cats, onMove, onRemove, onChange, onErro, onGerenc
     if (error) return onErro(error.message)
     onErro(''); onChange()
   }
+  async function salvarBloco(b, campos) {
+    const { error } = await supabase.from('treino_exercicio_series').update(campos).eq('id', b.id)
+    return error ? error.message : ''
+  }
   async function moverBloco(j, d) {
     const k = j + d
     if (k < 0 || k >= blocos.length) return
@@ -159,7 +164,7 @@ function Item({ it, i, total, cats, onMove, onRemove, onChange, onErro, onGerenc
       ) : (
         <>
           {blocos.map((b, j) => (
-            <Bloco key={b.id} b={b} i={j} total={blocos.length} cats={cats} onMove={moverBloco} onRemove={removerBloco} onErro={onErro} onGerenciar={onGerenciar} />
+            <Bloco key={b.id} b={b} i={j} total={blocos.length} cats={cats} onMove={moverBloco} onRemove={removerBloco} onErro={onErro} onGerenciar={onGerenciar} onSalvar={campos => salvarBloco(b, campos)} />
           ))}
           <button className="btn sec" style={{ marginTop: 6 }} onClick={addBloco}>+ Tipo de série</button>
         </>

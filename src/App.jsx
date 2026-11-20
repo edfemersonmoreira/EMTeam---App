@@ -5,6 +5,7 @@ import Alunas from './Alunas'
 import Fichas from './Fichas'
 import Historico from './Historico'
 import Alongamentos from './Alongamentos'
+import Modelos from './Modelos'
 import AerobicoAdmin from './AerobicoAdmin'
 import Icone from './Icone'
 import Aluna from './Aluna'
@@ -71,11 +72,13 @@ export default function App() {
         <nav>
           <button className={aba === 'alunas' ? 'on' : ''} onClick={() => irPara('alunas')}>Alunas</button>
           <button className={aba === 'exercicios' ? 'on' : ''} onClick={() => irPara('exercicios')}>Exercícios</button>
+          <button className={aba === 'modelos' ? 'on' : ''} onClick={() => irPara('modelos')}>Modelos</button>
           <button className={aba === 'alongamentos' ? 'on' : ''} onClick={() => irPara('alongamentos')}><Icone nome="alongar" tam={18} />Alongamentos</button>
         </nav>
         <main className="wide">
           {aba === 'alongamentos' ? <Alongamentos />
             : aba === 'exercicios' ? <Exercicios />
+            : aba === 'modelos' ? <Modelos />
             : aeroSel ? <AerobicoAdmin aluna={aeroSel} onVoltar={() => setAeroSel(null)} />
             : alunaSel ? <Fichas aluna={alunaSel} onVoltar={() => setAlunaSel(null)} />
             : evolSel ? <Historico alunaId={evolSel.id} titulo={`Evolução de ${evolSel.nome}`} onVoltar={() => setEvolSel(null)} />

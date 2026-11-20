@@ -1,0 +1,6 @@
+/* Biblioteca de modelos: identificação discreta do tipo de treino (ícone + nome, nunca só cor) */
+.cat-treino { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 99px; border: 1px solid var(--borda2); color: var(--txt2); font-size: 12px; font-weight: 700; white-space: nowrap; vertical-align: middle; }
+
+/* Menu do administrador com mais abas: rolagem horizontal em telas estreitas */
+nav { overflow-x: auto; }
+nav button { flex: 1 0 auto; white-space: nowrap; }

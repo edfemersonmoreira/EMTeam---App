@@ -10,6 +10,8 @@ const P = {
   chevron: <path d="M9 5l7 7-7 7" />,
   voltar: <path d="M19 12H5M11 6l-6 6 6 6" />,
   mais: <path d="M12 5v14M5 12h14" />,
+  superior: <path d="M8.5 4L4 7l2 3.5 2-1V20h8V9.5l2 1L20 7l-4.5-3c-.4 1.6-1.9 2.5-3.5 2.5S8.9 5.6 8.5 4z" />,
+  inferior: <path d="M6 4h12l1.5 15.5h-5.2L12 11.5l-2.3 8H4.5z" />,
   coracao: <path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0112 7.3a4.3 4.3 0 017.5 2.5C19.5 15.4 12 20 12 20z" />,
   alongar: <><circle cx="12" cy="4.5" r="2" /><path d="M4 9l8 2 8-2M12 11v5M8 21l4-5 4 5" /></>,
 }
@@ -18,7 +20,7 @@ export default function Icone({ nome, tam = 20 }) {
   return (
     <svg width={tam} height={tam} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
       strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flex: 'none' }}>
-      {P[nome]}
+      {P[nome] || P.dumbbell}
     </svg>
   )
 }

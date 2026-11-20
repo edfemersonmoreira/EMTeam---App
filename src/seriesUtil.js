@@ -30,3 +30,20 @@ export function resumo(blocos) {
   return `${p.series} ${p.series === 1 ? 'série' : 'séries'} de ${p.repeticoes || '–'}` +
     (extras > 0 ? `, mais ${extras} ${extras === 1 ? 'tipo de série' : 'tipos de série'}` : '')
 }
+
+// Descrição curta dos tipos de série de um exercício, por exemplo "Aquecimento 1×15, Principal 3×8-10".
+export function descreverBlocos(blocos, cats) {
+  return (blocos || []).map(b => {
+    const c = cats.find(x => x.id === b.categoria_id)
+    const nome = c ? c.nome : 'Principal'
+    return `${nome} ${b.series}×${b.repeticoes || '–'}${b.carga ? ` (${b.carga})` : ''}`
+  }).join(', ')
+}
+
+// Troca o item i de lugar com o vizinho (d = -1 sobe, 1 desce). Fora dos limites devolve a mesma lista.
+export function mover(lista, i, d) {
+  const k = i + d
+  if (k < 0 || k >= lista.length) return lista
+  const arr = [...lista]; [arr[i], arr[k]] = [arr[k], arr[i]]
+  return arr
+}
