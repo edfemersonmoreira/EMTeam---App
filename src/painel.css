@@ -63,11 +63,12 @@ main.painel { max-width: 1180px; }
   .painel-acessos { gap: 14px; }
   main.painel { padding: 28px 24px; }
 }
-/* Menu do admin no computador: abas com largura própria, centralizadas */
-@media (min-width: 900px) { .app > nav { justify-content: center; } .app > nav button { flex: 0 0 auto; min-width: 128px; padding: 0 22px; } }
+/* Barra do administrador dentro das áreas: voltar ao Início + nome da área atual */
+.nav-area { align-items: center; justify-content: flex-start; gap: 14px; }
+.nav-area button { flex: 0 0 auto; min-width: 0; padding: 0 14px; color: var(--txt); border-color: var(--borda2); }
+.nav-area-atual { color: var(--verde2); font-size: 15px; font-weight: 800; }
+@media (min-width: 900px) { .app > nav.nav-area { padding-left: max(12px, calc((100vw - 1180px) / 2 + 8px)); } }
 
 @media (max-width: 440px) {
   .painel-cab h3 { font-size: 17px; }
-  .app > nav { gap: 2px; padding: 8px; }
-  .app > nav button { font-size: 13px; padding: 0 4px; gap: 0; }
 }

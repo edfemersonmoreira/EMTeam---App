@@ -1,0 +1,53 @@
+/* Área "Alunas": um card por aluna, na mesma linguagem do painel inicial.
+   Computador: identificação à esquerda e as cinco ações à direita, na mesma linha. Telas menores: ações abaixo, em grade. */
+main.wide:has(.alunas-lista) { max-width: 1180px; }
+.alunas-lista { display: flex; flex-direction: column; gap: 10px; }
+.alunas-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.alunas-topo h2 { margin: 0 0 2px; font-size: 24px; font-weight: 800; }
+.alunas-topo .muted { font-size: 14px; }
+
+.aluna-card {
+  display: flex; flex-direction: column; gap: 14px; padding: 16px; background: var(--card);
+  border: 1px solid var(--borda); border-radius: var(--r-card); transition: border-color .16s ease;
+}
+.aluna-card:hover { border-color: var(--borda2); }
+.aluna-card.off { opacity: .72; }
+.aluna-id { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.aluna-id .avatar { width: 56px; height: 56px; font-size: 18px; }
+.aluna-id .avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.aluna-dados { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.aluna-dados .muted { font-size: 13px; }
+.aluna-nome { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.aluna-nome strong { font-size: 17px; font-weight: 800; }
+.badge.inativa { background: transparent; color: var(--txt2); border-color: var(--borda2); }
+
+.aluna-acoes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.acao {
+  display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 12px;
+  background: transparent; border: 1px solid var(--borda2); border-radius: var(--r-ctl); color: var(--txt);
+  font-size: 14px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: border-color .16s ease, background .16s ease, color .16s ease;
+}
+.acao svg { color: var(--ico); }
+.acao:hover { border-color: var(--verde2); background: var(--hover); }
+.acao:focus-visible { outline: 2px solid var(--verde2); outline-offset: 2px; }
+.acao.principal { background: var(--verde); border-color: var(--verde); color: #fff; }
+.acao.principal svg { color: #fff; }
+.acao.principal:hover { background: #0a8f8f; border-color: #0a8f8f; }
+.acao.desativar { color: var(--txt2); }
+.acao.desativar svg { color: var(--txt2); }
+.acao.desativar:hover { border-color: var(--erro); color: var(--erro); background: transparent; }
+.acao.desativar:hover svg { color: var(--erro); }
+
+.aluna-confirma { padding: 12px 14px; border: 1px solid var(--borda2); border-radius: var(--r-ctl); background: var(--bg2); }
+.aluna-confirma p { margin: 0 0 10px; font-size: 14px; }
+.btn.perigo { background: var(--vermelho); color: #fff; }
+.btn.perigo:hover { background: var(--vermelho); filter: brightness(.92); }
+
+@media (min-width: 640px) { .aluna-acoes { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@media (min-width: 1000px) {
+  .aluna-card { flex-direction: row; align-items: center; justify-content: space-between; gap: 24px; padding: 14px 18px; }
+  .aluna-id { flex: 1 1 320px; }
+  .aluna-acoes, .aluna-confirma { flex: 0 0 auto; }
+  .aluna-acoes { grid-template-columns: repeat(5, 112px); }
+  .aluna-confirma { max-width: 560px; }
+}

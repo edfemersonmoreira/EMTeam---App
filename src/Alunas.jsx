@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import Icone from './Icone'
+import './alunas.css'
+
+const iniciais = n => (n || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()
 
 export default function Alunas({ onFichas, onEvolucao, onAerobico }) {
   const [lista, setLista] = useState([])
@@ -8,6 +12,7 @@ export default function Alunas({ onFichas, onEvolucao, onAerobico }) {
   const [msg, setMsg] = useState('')
   const [ok, setOk] = useState('')
   const [salvando, setSalvando] = useState(false)
+  const [confirmar, setConfirmar] = useState(null)   // id da aluna que está aguardando confirmação para desativar
 
   async function carregar() {
     const [p, u] = await Promise.all([
@@ -75,30 +80,58 @@ export default function Alunas({ onFichas, onEvolucao, onAerobico }) {
     </form>
   )
 
+  const ativas = lista.filter(a => a.ativa).length
+  const inativas = lista.length - ativas
+
   return (
-    <>
-      <div className="row between" style={{ cursor: 'default' }}>
-        <strong>Minhas alunas</strong>
+    <div className="alunas-lista">
+      <div className="alunas-topo">
+        <div>
+          <h2>Alunas</h2>
+          <div className="muted">{lista.length === 0 ? 'Nenhuma aluna cadastrada ainda.' : `${ativas} ${ativas === 1 ? 'ativa' : 'ativas'} · ${inativas} ${inativas === 1 ? 'inativa' : 'inativas'}`}</div>
+        </div>
         <button className="btn" onClick={() => { setNova({ nome: '', email: '', senha: '', telefone: '' }); setMsg(''); setOk('') }}>+ Nova aluna</button>
       </div>
       {msg && <p className="erro">{msg}</p>}
       {ok && <p className="ok">{ok}</p>}
-      {lista.length === 0 && <p className="muted">Nenhuma aluna cadastrada ainda.</p>}
       {lista.map(a => (
-        <div key={a.id} className={'card' + (a.ativa ? '' : ' off')}>
-          <strong>{a.nome}</strong>
-          <div className="muted">
-            {a.telefone || 'sem telefone'} · {a.ultimo ? 'último treino em ' + new Date(a.ultimo).toLocaleDateString('pt-BR') : 'ainda não treinou'}
+        <article key={a.id} className={'aluna-card' + (a.ativa ? '' : ' off')} aria-label={a.nome}>
+          <div className="aluna-id">
+            <span className="avatar sem-acao">{a.avatar_url ? <img src={a.avatar_url} alt="" /> : iniciais(a.nome)}</span>
+            <div className="aluna-dados">
+              <div className="aluna-nome">
+                <strong>{a.nome}</strong>
+                {!a.ativa && <span className="badge inativa">Inativa</span>}
+              </div>
+              <div className="muted">{a.telefone || 'sem telefone'}</div>
+              <div className="muted">
+                {a.ultimo ? 'Último treino em ' + new Date(a.ultimo).toLocaleDateString('pt-BR') : 'Ainda não treinou'}
+                {a.total ? ` · ${a.total} ${a.total === 1 ? 'treino' : 'treinos'}` : ''}
+              </div>
+            </div>
           </div>
-          <div className="row wrap">
-            <button className="btn" onClick={() => onFichas(a)}>Fichas</button>
-            <button className="btn sec" onClick={() => onEvolucao(a)}>Evolução</button>
-            <button className="btn sec" onClick={() => onAerobico(a)}>Aeróbico</button>
-            <button className="btn sec" onClick={() => setEdit(a)}>Editar</button>
-            <button className="btn sec" onClick={() => alternar(a)}>{a.ativa ? 'Desativar' : 'Reativar'}</button>
-          </div>
-        </div>
+
+          {confirmar === a.id ? (
+            <div className="aluna-confirma" role="alertdialog" aria-label={`Desativar ${a.nome}`}>
+              <p><strong>Desativar {a.nome}?</strong> Ela perde o acesso ao app. O cadastro, as fichas e o histórico continuam guardados, e você pode reativá-la quando quiser.</p>
+              <div className="row wrap">
+                <button className="btn perigo" onClick={() => { setConfirmar(null); alternar(a) }}>Sim, desativar</button>
+                <button className="btn sec" onClick={() => setConfirmar(null)}>Cancelar</button>
+              </div>
+            </div>
+          ) : (
+            <div className="aluna-acoes">
+              <button className="acao principal" onClick={() => onFichas(a)} aria-label={`Treinos e fichas de ${a.nome}`}><Icone nome="dumbbell" tam={18} />Treinos</button>
+              <button className="acao" onClick={() => onEvolucao(a)} aria-label={`Cargas e evolução de ${a.nome}`}><Icone nome="grafico" tam={18} />Cargas</button>
+              <button className="acao" onClick={() => onAerobico(a)} aria-label={`Aeróbico de ${a.nome}`}><Icone nome="coracao" tam={18} />Aeróbico</button>
+              <button className="acao" onClick={() => setEdit(a)} aria-label={`Editar dados de ${a.nome}`}><Icone nome="lapiz" tam={18} />Editar</button>
+              {a.ativa
+                ? <button className="acao desativar" onClick={() => setConfirmar(a.id)} aria-label={`Desativar ${a.nome}`}><Icone nome="desligar" tam={18} />Desativar</button>
+                : <button className="acao" onClick={() => alternar(a)} aria-label={`Reativar ${a.nome}`}><Icone nome="desligar" tam={18} />Reativar</button>}
+            </div>
+          )}
+        </article>
       ))}
-    </>
+    </div>
   )
 }

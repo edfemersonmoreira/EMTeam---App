@@ -14,6 +14,8 @@ import Senha from './Senha'
 import Logo from './Logo'
 import TemaBotao from './TemaBotao'
 
+const NOME_AREA = { alunas: 'Alunas', exercicios: 'Exercícios', modelos: 'Modelos de treino', alongamentos: 'Alongamentos' }
+
 function Login({ aviso }) {
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
@@ -104,13 +106,13 @@ export default function App() {
   } else if (admin) {
     conteudo = (
       <>
-        <nav>
-          <button className={aba === 'inicio' ? 'on' : ''} onClick={() => irPara('inicio')}>Início</button>
-          <button className={aba === 'alunas' ? 'on' : ''} onClick={() => irPara('alunas')}>Alunas</button>
-          <button className={aba === 'exercicios' ? 'on' : ''} onClick={() => irPara('exercicios')}>Exercícios</button>
-          <button className={aba === 'modelos' ? 'on' : ''} onClick={() => irPara('modelos')}>Modelos</button>
-          <button className={aba === 'alongamentos' ? 'on' : ''} onClick={() => irPara('alongamentos')}><Icone nome="alongar" tam={18} />Alongamentos</button>
-        </nav>
+        {/* As áreas (Alunas, Exercícios, Modelos, Alongamentos) abrem pelos cards do Início. Dentro delas, a barra mostra onde a administradora está e leva de volta ao Início. */}
+        {aba !== 'inicio' && (
+          <nav className="nav-area" aria-label="Navegação do administrador">
+            <button onClick={() => irPara('inicio')}><Icone nome="voltar" tam={18} />Início</button>
+            <span className="nav-area-atual" aria-current="page">{NOME_AREA[aba]}</span>
+          </nav>
+        )}
         {aba === 'inicio' ? <Inicio perfil={perfil} irPara={irPara} abrirAluna={abrirAluna} /> : (
         <main className="wide">
           {aba === 'alongamentos' ? <Alongamentos />
