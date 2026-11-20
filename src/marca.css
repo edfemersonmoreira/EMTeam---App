@@ -2,17 +2,22 @@
    Anilha (anéis), régua de carga e padrão EM, sempre tom sobre tom e sem interferir na leitura. */
 
 header .logo { height: 28px; }
-.logo.grande { height: auto; width: 74%; max-width: 300px; margin: 0 auto 26px; }
+.logo-marca { position: relative; width: min(300px, calc((min(100vw, 360px) - 32px) * .74)); margin: 0 auto 26px; }
+.logo.grande { display: block; height: auto; width: 100%; margin: 0; position: relative; }
+/* Anilha atrás da logo: centrada no quadro da logo (49% da altura, o centro visual: as letras pesam um pouco mais no alto) e proporcional à largura dela */
+.logo-marca::before {
+  content: ''; position: absolute; left: 50%; top: 49%; width: 180%; aspect-ratio: 1; transform: translate(-50%, -50%); z-index: -1; pointer-events: none;
+  background: radial-gradient(circle closest-side, transparent 0 70.4%, rgba(0, 128, 128, .22) 70.4% 75.6%, transparent 75.6% 85.9%, rgba(32, 178, 170, .16) 85.9% 87%, transparent 87% 99.3%, rgba(32, 178, 170, .10) 99.3% 100%, transparent 100%);
+}
 
 /* Login: anilha atrás da logo e padrão EM bem suave, que some em direção ao centro */
 body:has(.login) {
   background-color: var(--bg);
   background-image:
     linear-gradient(180deg, rgba(16, 22, 23, 1) 0%, rgba(16, 22, 23, 0) 28%, rgba(16, 22, 23, 0) 62%, rgba(16, 22, 23, 1) 100%),
-    radial-gradient(circle at 50% 30%, transparent 0 190px, rgba(0, 128, 128, .22) 190px 204px, transparent 204px 232px, rgba(32, 178, 170, .16) 232px 235px, transparent 235px 268px, rgba(32, 178, 170, .10) 268px 270px, transparent 270px),
     url(/padrao-em.svg);
-  background-size: auto, auto, 144px 80px;
-  background-repeat: no-repeat, no-repeat, repeat;
+  background-size: auto, 144px 80px;
+  background-repeat: no-repeat, repeat;
 }
 
 /* Treino de hoje: anilha no canto do bloco verde */

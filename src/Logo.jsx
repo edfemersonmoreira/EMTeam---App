@@ -5,7 +5,7 @@ import { useState } from 'react'
 export default function Logo({ grande = false }) {
   const [ok, setOk] = useState(true)
   if (!ok) return <span className={'marca' + (grande ? ' grande' : '')}>EM Team</span>
-  return (
+  const img = (
     <img
       src={grande ? '/emteam-empilhada.svg' : '/emteam-horizontal-compacta.svg'}
       alt="EM Team"
@@ -13,4 +13,7 @@ export default function Logo({ grande = false }) {
       onError={() => setOk(false)}
     />
   )
+  // Logo grande (login): fica dentro de um quadro próprio, e a anilha é desenhada em relação a esse quadro.
+  // Assim a logo e a anilha mantêm o mesmo centro em qualquer tamanho de tela.
+  return grande ? <div className="logo-marca">{img}</div> : img
 }

@@ -96,7 +96,10 @@ nav button:focus-visible, .mini:focus-visible { outline: 2px solid var(--verde2)
 .chip.on { background: rgba(32, 178, 170, .16); border-color: var(--verde2); color: var(--verde2); }
 .faixa-chips { display: flex; gap: 8px; overflow-x: auto; padding: 12px 0 4px; }
 
-.login { max-width: 360px; margin: 0 auto; min-height: 100dvh; padding: 24px 16px; display: flex; flex-direction: column; justify-content: center; text-align: center; }
+/* A tela de login ocupa a largura toda (a anilha atrás da logo pode passar das bordas da coluna e é cortada na borda da tela, sem criar rolagem horizontal);
+   o conteúdo continua numa coluna de até 328 px, centralizada. */
+.login { width: 100%; min-height: 100dvh; padding: 24px 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; overflow-x: clip; }
+.login > :not(.logo-marca) { width: 100%; max-width: 328px; }
 .login form { background: var(--card); border: 1px solid var(--borda); border-radius: var(--r-card); padding: 18px; text-align: left; }
 .login .btn { width: 100%; margin-top: 10px; }
 .center { text-align: center; margin-top: 30vh; color: var(--txt2); }
