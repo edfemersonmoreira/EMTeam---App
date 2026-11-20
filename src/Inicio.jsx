@@ -3,7 +3,7 @@ import { supabase } from './supabase'
 import Icone from './Icone'
 import './painel.css'
 import {
-  agruparConcluidos, ehNovo, marcarVistos, lembretesFichas, resumoAlunas, rotuloQuando, primeiroNome, plural, fmtData,
+  agruparConcluidos, ehNovo, marcarVistos, lembretesFichas, resumoAlunas, rotuloQuando, primeiroNome, plural, fmtData, fichasSemValidade,
   JANELA_CONCLUIDOS_DIAS,
 } from './painelUtil'
 
@@ -60,6 +60,7 @@ export default function Inicio({ perfil, irPara, abrirAluna }) {
       concluidos: agruparConcluidos(ok(s, 'treinos concluídos'), ok(a, 'aeróbicos concluídos'), nomes),
       lembretes: lembretesFichas(alunas, ok(f, 'fichas')),
       lembretesOk: !p.error && !f.error,
+      semValidade: fichasSemValidade(alunas, ok(f, 'fichas')),
       concluidosOk: !p.error && !s.error,
       exercicios: ex.error ? null : { ativos: exercicios.filter(x => x.ativo).length, total: exercicios.length },
       modelos: m.error ? null : (m.count ?? 0),
@@ -154,7 +155,7 @@ export default function Inicio({ perfil, irPara, abrirAluna }) {
           <div className="painel-cab">
             <h3 id="t-fichas"><Icone nome="modelos" tam={18} /> Fichas e pendências</h3>
           </div>
-          <div className="muted pequeno">Alunas sem ficha e fichas vencidas ou perto de vencer</div>
+          <div className="muted pequeno">Fichas que vencem em até 7 dias e alunas sem ficha ativa</div>
           {!dados && <p className="painel-vazio">Carregando…</p>}
           {dados && !dados.lembretesOk && <p className="painel-vazio">Não foi possível carregar as fichas.</p>}
           {dados && dados.lembretesOk && dados.lembretes.length === 0 && (
@@ -167,16 +168,21 @@ export default function Inicio({ perfil, irPara, abrirAluna }) {
                 <span className="notif-t"><strong>{l.nome}</strong></span>
                 <span className="notif-d">
                   {l.nivel === 'sem-ficha' ? 'Sem ficha ativa'
-                    : `${l.ficha} · ${l.restam < 0 ? `venceu há ${plural(-l.restam, 'dia', 'dias')}` : l.restam === 0 ? 'vence hoje' : `vence em ${plural(l.restam, 'dia', 'dias')}`} (${fmtData(l.vence).slice(0, 5)})`}
+                    : `${l.ficha} · ${l.restam < 0 ? 'venceu em' : 'vence em'} ${fmtData(l.vence)}`}
                 </span>
               </span>
               <span className="notif-q">
                 <em className={'pilula ' + l.nivel}>
-                  {l.nivel === 'sem-ficha' ? 'Criar ficha' : l.nivel === 'vencida' ? 'Vencida' : 'Vence em breve'}
+                  {l.nivel === 'sem-ficha' ? 'Criar ficha' : l.nivel === 'vencida' ? 'Vencida' : l.restam === 0 ? 'Vence hoje' : l.restam === 1 ? 'Vence amanhã' : `Vence em ${l.restam} dias`}
                 </em>
               </span>
             </button>
           ))}
+          {dados && dados.lembretesOk && dados.semValidade > 0 && (
+            <p className="muted pequeno painel-nota">
+              {plural(dados.semValidade, 'ficha ativa está sem validade definida e não gera lembrete', 'fichas ativas estão sem validade definida e não geram lembrete')}. Defina em Alunas › Treinos › Validade.
+            </p>
+          )}
         </section>
       </div>
     </main>

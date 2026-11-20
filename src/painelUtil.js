@@ -2,7 +2,7 @@
 // Tudo aqui trabalha com dados reais lidos do banco; nada é inventado.
 
 // Validade da ficha: definida ao criar ou copiar (padrão 5 semanas) e guardada em fichas.validade_em (data).
-// Fichas antigas, sem validade gravada, usam o padrão: data de criação + 5 semanas.
+// Fichas antigas, sem validade gravada, ficam sem lembrete até receberem uma (botão "Validade" na ficha).
 export const VALIDADE_PADRAO_SEMANAS = 5
 export const AVISO_ANTES_DIAS = 7      // lembrete "perto de vencer": faltam 7 dias ou menos
 export const JANELA_CONCLUIDOS_DIAS = 7
@@ -76,22 +76,23 @@ export function dataValidade(semanas, hoje = new Date()) {
   return txtData(d)
 }
 
-// Vencimento da ficha: o gravado ou, nas fichas antigas, criação + 5 semanas.
-export function vencimentoDaFicha(f) {
-  if (f.validade_em) return { data: dataLocal(f.validade_em), padrao: false }
-  const d = meiaNoite(new Date(f.criado_em)); d.setDate(d.getDate() + VALIDADE_PADRAO_SEMANAS * 7)
-  return { data: d, padrao: true }
-}
+// Vencimento da ficha: só a data gravada em fichas.validade_em. Ficha sem validade gravada não gera lembrete (não inventamos prazo).
+export const vencimentoDaFicha = f => (f.validade_em ? dataLocal(f.validade_em) : null)
 
-// Dias até vencer (negativo = já venceu).
-export const diasParaVencer = (f, agora = new Date()) => Math.round((vencimentoDaFicha(f).data - meiaNoite(agora)) / MS_DIA)
+// Dias até vencer, contando por data (fuso do aparelho): 0 = vence hoje, negativo = já venceu. Sem validade: null.
+export function diasParaVencer(f, agora = new Date()) {
+  const v = vencimentoDaFicha(f)
+  return v ? Math.round((v - meiaNoite(agora)) / MS_DIA) : null
+}
 export const fmtData = d => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
 // Lembretes sobre fichas:
+//   em-breve  : ficha ATIVA que vence nos próximos AVISO_ANTES_DIAS dias (do 7º dia antes até o dia do vencimento, inclusive).
+//               Some sozinho quando a validade é renovada, a ficha é substituída/desativada/arquivada ou o prazo passa.
 //   sem-ficha : aluna ativa sem ficha ativa
-//   vencida   : ficha ativa com validade já vencida
-//   em-breve  : ficha ativa que vence nos próximos AVISO_ANTES_DIAS dias (inclui o dia do vencimento)
-// Alunas desativadas nunca geram lembrete.
+// Uma só linha por ficha (há no máximo uma ficha ativa por aluna). Alunas desativadas nunca geram lembrete.
+// Fichas vencidas não são mais "vigentes" e, por regra, não geram lembrete (MOSTRAR_VENCIDAS = true as traz de volta).
+export const MOSTRAR_VENCIDAS = false
 export function lembretesFichas(alunas, fichasAtivas, agora = new Date()) {
   const porAluna = Object.fromEntries((fichasAtivas || []).map(f => [f.aluna_id, f]))
   const out = []
@@ -100,11 +101,18 @@ export function lembretesFichas(alunas, fichasAtivas, agora = new Date()) {
     const base = { alunaId: a.id, nome: a.nome, avatar: a.avatar_url || null }
     if (!f) { out.push({ ...base, chave: `sem|${a.id}`, nivel: 'sem-ficha', restam: null, ficha: null, vence: null, ordem: 0 }); return }
     const restam = diasParaVencer(f, agora)
-    const vence = vencimentoDaFicha(f).data
-    if (restam < 0) out.push({ ...base, chave: `ficha|${f.id}`, nivel: 'vencida', restam, ficha: f.nome, vence, ordem: 1 })
+    if (restam == null) return
+    const vence = vencimentoDaFicha(f)
+    if (restam < 0) { if (MOSTRAR_VENCIDAS) out.push({ ...base, chave: `ficha|${f.id}`, nivel: 'vencida', restam, ficha: f.nome, vence, ordem: 1 }) }
     else if (restam <= AVISO_ANTES_DIAS) out.push({ ...base, chave: `ficha|${f.id}`, nivel: 'em-breve', restam, ficha: f.nome, vence, ordem: 2 })
   })
   return out.sort((x, y) => x.ordem - y.ordem || (x.restam ?? 0) - (y.restam ?? 0) || x.nome.localeCompare(y.nome, 'pt-BR'))
+}
+
+// Fichas ativas de alunas ativas que ainda não têm validade gravada (para avisar, sem inventar prazo).
+export const fichasSemValidade = (alunas, fichasAtivas) => {
+  const ativas = new Set((alunas || []).filter(a => a.ativa).map(a => a.id))
+  return (fichasAtivas || []).filter(f => ativas.has(f.aluna_id) && !f.validade_em).length
 }
 
 export function resumoAlunas(alunas) {

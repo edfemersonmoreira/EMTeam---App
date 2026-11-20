@@ -72,3 +72,5 @@ main.painel { max-width: 1180px; }
 @media (max-width: 440px) {
   .painel-cab h3 { font-size: 17px; }
 }
+
+.painel-nota { margin: 10px 0 8px; }

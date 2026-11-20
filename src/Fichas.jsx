@@ -133,7 +133,7 @@ export default function Fichas({ aluna, onVoltar }) {
           {f.objetivo && <div className="muted">{f.objetivo}</div>}
           {!f.arquivada_em && (() => {
             const v = vencimentoDaFicha(f), r = diasParaVencer(f)
-            return <div className="muted">Validade: {r < 0 ? `venceu em ${fmtData(v.data)}` : `vence em ${fmtData(v.data)}`}{v.padrao ? ' (prazo padrão)' : ''}</div>
+            return <div className="muted">Validade: {v ? `${r < 0 ? 'venceu' : 'vence'} em ${fmtData(v)}` : 'não definida'}</div>
           })()}
           {renovar?.id === f.id && (
             <div className="row wrap">
