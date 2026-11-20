@@ -9,6 +9,7 @@ import Icone from './Icone'
 import './along.css'
 import { WHATSAPP } from './config'
 import CategoriaTreino from './CategoriaTreino'
+import { estadoDoDia } from './semanaUtil'
 
 const ABREV = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 const chaveDia = d => d.toLocaleDateString('sv-SE')
@@ -112,10 +113,7 @@ export default function Aluna({ perfil }) {
     const t = temPlano ? (treinos.find(x => (x.dias || []).includes(dow)) || null) : null
     const feito = !!feitos[chaveDia(d)]
     const eHoje = chaveDia(d) === chaveDia(hoje0)
-    let estado = 'descanso'
-    if (feito) estado = 'feito'
-    else if (t && d < hoje0) estado = 'falta'
-    else if (t) estado = 'plan'
+    const estado = estadoDoDia({ feito, programado: !!t, passado: d < hoje0 })
     return { i, dow, t, estado, eHoje }
   })
 
@@ -181,23 +179,29 @@ export default function Aluna({ perfil }) {
       )}
 
       <div className="semana">
-        {semana.map(d => (
-          <button key={d.i} disabled={!d.t} onClick={() => d.t && setExec(d.t)}
-            className={`dia-sem ${d.estado}${d.eHoje ? ' hoje' : ''}`}
-            aria-label={`${ABREV[d.dow]}${d.t ? ', ' + d.t.nome : ''}${d.estado === 'feito' ? ', feito' : d.estado === 'falta' ? ', não feito' : ''}`}>
-            <span className="bola">
-              {d.t && d.t.categoria
-                ? <Icone nome={d.t.categoria.icone} tam={16} />
-                : <>{d.estado === 'feito' && <Icone nome="check" tam={16} />}{d.estado === 'falta' && <Icone nome="x" tam={15} />}</>}
-              {d.estado === 'feito' && d.t && d.t.categoria && <span className="selo"><Icone nome="check" tam={9} /></span>}
-            </span>
-            {ABREV[d.dow]}
-          </button>
-        ))}
+        {semana.map(d => {
+          const cat = d.t ? d.t.categoria : null
+          const icone = cat ? cat.icone : 'dumbbell'
+          const rot = d.estado === 'feito' ? 'feito' : d.estado === 'falta' ? 'não realizado' : d.estado === 'plan' ? 'programado' : 'sem treino programado'
+          return (
+            <button key={d.i} disabled={!d.t} onClick={() => d.t && setExec(d.t)}
+              className={`dia-sem ${d.estado}${d.eHoje ? ' hoje' : ''}`}
+              aria-label={`${ABREV[d.dow]}${d.t ? ', ' + d.t.nome : ''}, ${rot}`}>
+              <span className="bola">
+                {d.estado === 'feito' && <Icone nome={cat ? cat.icone : 'check'} tam={16} />}
+                {(d.estado === 'plan' || d.estado === 'falta') && <Icone nome={icone} tam={16} />}
+                {d.estado === 'feito' && cat && <span className="selo"><Icone nome="check" tam={9} /></span>}
+              </span>
+              {ABREV[d.dow]}
+            </button>
+          )
+        })}
       </div>
       <div className="legenda">
+        <span><i className="pt plan" />Programado</span>
         <span><i className="pt feito" />Feito</span>
-        <span><i className="pt falta" />Não feito</span>
+        <span><i className="pt falta" />Não realizado</span>
+        <span><i className="pt descanso" />Descanso</span>
       </div>
 
       {seqN > 0 && (
