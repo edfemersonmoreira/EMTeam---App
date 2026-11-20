@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#101617" />
     <meta name="color-scheme" content="dark" />
+    <script>
+      // Aplica o tema salvo antes de a tela aparecer (sem piscar). Mesma lógica de src/tema.js.
+      try {
+        if (localStorage.getItem('emteam-tema') === 'claro') {
+          document.documentElement.setAttribute('data-tema', 'claro')
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#F3F6F6')
+          document.querySelector('meta[name="color-scheme"]').setAttribute('content', 'light')
+        }
+      } catch (e) {}
+    </script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
