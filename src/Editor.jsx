@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import Categorias from './Categorias'
 import Icone from './Icone'
+import { inserirExercicios, linhasDoModelo } from './prescricao'
 import './editor.css'
+import './treinoBloco.css'
 
 const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
 
@@ -97,7 +99,7 @@ export function Bloco({ b, i, total, cats, onSalvar, onMove, onRemove, onErro, o
 }
 
 // Exercício dentro do treino: vários tipos de série (blocos) + observação geral
-function Item({ it, i, total, cats, onMove, onRemove, onChange, onErro, onGerenciar }) {
+function Item({ it, i, total, rotulo, cats, onMove, onRemove, onDuplicar, onChange, onErro, onGerenciar }) {
   const blocos = blocosOrdenados(it)
   const legado = !it.blocos
   const [obs, setObs] = useState(it.observacao ?? '')
@@ -146,12 +148,14 @@ function Item({ it, i, total, cats, onMove, onRemove, onChange, onErro, onGerenc
   }
 
   return (
-    <div className="item">
-      <div className="topo">
-        <strong>{it.exercicios?.nome}</strong>
-        <div className="row" style={{ margin: 0 }}>
+    <div className="item item-ex">
+      <div className="item-cab">
+        <span className="ex-rotulo" title={`Exercício ${i + 1} deste treino`}>{rotulo}</span>
+        <strong className="ex-nome">{it.exercicios?.nome}</strong>
+        <div className="item-acoes">
           <button className="mini" disabled={i === 0} onClick={() => onMove(i, -1)} aria-label="Subir exercício">↑</button>
           <button className="mini" disabled={i === total - 1} onClick={() => onMove(i, 1)} aria-label="Descer exercício">↓</button>
+          <button className="mini" onClick={() => onDuplicar(it, i)} aria-label="Duplicar exercício">Duplicar</button>
           <button className="mini" onClick={() => onRemove(it)} aria-label="Remover exercício">✕</button>
         </div>
       </div>
@@ -175,40 +179,22 @@ function Item({ it, i, total, cats, onMove, onRemove, onChange, onErro, onGerenc
   )
 }
 
-function TreinoCard({ treino, biblioteca, cats, catsTreino, onChange, onGerenciar }) {
+// Um dia de treino: container próprio, com cabeçalho em destaque, exercícios identificados pela letra do dia e ações dentro do mesmo bloco
+function TreinoCard({ treino, letra, proximaOrdem, biblioteca, cats, catsTreino, onChange, onGerenciar }) {
   const items = [...(treino.treino_exercicios || [])].sort((a, b) => a.ordem - b.ordem)
   const [modo, setModo] = useState(null)
+  const [aberto, setAberto] = useState(true)
   const [busca, setBusca] = useState('')
   const [texto, setTexto] = useState('')
   const [previa, setPrevia] = useState(null)
   const [modelos, setModelos] = useState([])
   const [msg, setMsg] = useState('')
   const [ok, setOk] = useState('')
-  const principal = cats.find(c => c.principal)
 
-  // Insere exercícios no treino, cada um com seus blocos de série (padrão: um bloco Principal)
+  // Insere exercícios no fim do treino, cada um com seus tipos de série (padrão: um bloco Principal). Se algo falhar, desfaz o que foi copiado.
   async function inserir(linhas) {
-    const base = items.length
-    for (let k = 0; k < linhas.length; k++) {
-      const l = linhas[k]
-      const { data, error } = await supabase.from('treino_exercicios').insert({
-        treino_id: treino.id, exercicio_id: l.exercicio_id, ordem: base + k,
-        series: l.series || 3, repeticoes: l.repeticoes || '10', descanso_seg: l.descanso_seg ?? null, observacao: l.observacao ?? null,
-      }).select('id').single()
-      if (error) return setMsg(error.message)
-      if (cats.length) {
-        const existentes = new Set(cats.map(c => c.id))
-        const origem = (l.blocos && l.blocos.length ? l.blocos : [{ series: l.series || 3, repeticoes: l.repeticoes || '10', descanso_seg: l.descanso_seg ?? null }])
-        const blocos = origem.map((b, j) => ({
-          treino_exercicio_id: data.id,
-          categoria_id: b.categoria_id && existentes.has(b.categoria_id) ? b.categoria_id : (principal ? principal.id : null),
-          ordem: j, series: b.series || 1, repeticoes: b.repeticoes || null, carga: b.carga || null,
-          descanso_seg: b.descanso_seg ?? null, observacao: b.observacao || null,
-        }))
-        const r2 = await supabase.from('treino_exercicio_series').insert(blocos)
-        if (r2.error) return setMsg(r2.error.message)
-      }
-    }
+    const erro = await inserirExercicios(treino.id, items.length, linhas, cats)
+    if (erro) return setMsg(erro.message)
     setMsg(''); setModo(null); setPrevia(null); setTexto(''); onChange()
   }
 
@@ -223,6 +209,37 @@ function TreinoCard({ treino, biblioteca, cats, catsTreino, onChange, onGerencia
   async function remover(it) {
     await supabase.from('treino_exercicios').delete().eq('id', it.id)
     onChange()
+  }
+
+  // Linhas (com tipos de série) de um ou mais exercícios do treino, prontas para inserirExercicios
+  const linhaDe = x => ({
+    exercicio_id: x.exercicio_id, series: x.series, repeticoes: x.repeticoes, descanso_seg: x.descanso_seg, observacao: x.observacao,
+    blocos: blocosOrdenados(x).map(b => ({ categoria_id: b.categoria_id, series: b.series, repeticoes: b.repeticoes, carga: b.carga, descanso_seg: b.descanso_seg, observacao: b.observacao })),
+  })
+
+  // Duplica o exercício logo abaixo dele, com todos os tipos de série. Só cria registros novos: o histórico de cargas não é tocado.
+  async function duplicarExercicio(it, pos) {
+    const depois = items.slice(pos + 1)
+    const r = await Promise.all(depois.map((x, k) => supabase.from('treino_exercicios').update({ ordem: pos + 2 + k }).eq('id', x.id)))
+    const falha = r.find(x => x.error)
+    if (falha) return setMsg(falha.error.message)
+    const erro = await inserirExercicios(treino.id, pos + 1, [linhaDe(it)], cats)
+    if (erro) return setMsg(erro.message)
+    setMsg(''); onChange()
+  }
+
+  // Duplica o dia inteiro como um treino novo, sem dias da semana marcados (para não competir com o original).
+  async function duplicarTreino() {
+    const novo = { ficha_id: treino.ficha_id, nome: `${treino.nome} (cópia)`, ordem: proximaOrdem }
+    if ('categoria_id' in treino && treino.categoria_id) novo.categoria_id = treino.categoria_id
+    const { data, error } = await supabase.from('treinos').insert(novo).select('id').single()
+    if (error) return setMsg(error.message)
+    const erro = await inserirExercicios(data.id, 0, items.map(linhaDe), cats)
+    if (erro) {
+      await supabase.from('treinos').delete().eq('id', data.id)   // não deixa um treino pela metade
+      return setMsg('Não foi possível duplicar o treino e nada foi alterado na ficha. ' + erro.message)
+    }
+    setMsg(''); onChange()
   }
 
   async function renomear(e) {
@@ -265,10 +282,7 @@ function TreinoCard({ treino, biblioteca, cats, catsTreino, onChange, onGerencia
   async function usarModelo(m) {
     const { data, error } = await supabase.from('modelo_itens').select('*').eq('modelo_id', m.id).order('ordem')
     if (error) return setMsg(error.message)
-    inserir(data.map(x => ({
-      exercicio_id: x.exercicio_id, series: x.series, repeticoes: x.repeticoes,
-      descanso_seg: x.descanso_seg, observacao: x.observacao, blocos: Array.isArray(x.blocos) ? x.blocos : [],
-    })))
+    inserir(linhasDoModelo(data))
   }
 
   async function excluirModelo(m) {
@@ -296,11 +310,22 @@ function TreinoCard({ treino, biblioteca, cats, catsTreino, onChange, onGerencia
   const reconhecidos = previa ? previa.filter(p => p.item) : []
 
   return (
-    <div className="card">
-      <div className="topo">
-        <input defaultValue={treino.nome} onBlur={renomear} style={{ fontWeight: 600 }} />
-        <button className="mini" onClick={excluirTreino}>Excluir</button>
+    <section className="treino-bloco" id={`treino-${treino.id}`} aria-label={treino.nome}>
+      <div className="treino-cab">
+        <button className="treino-toggle" onClick={() => setAberto(!aberto)} aria-expanded={aberto} aria-label={aberto ? 'Recolher treino' : 'Expandir treino'}>
+          <Icone nome="chevron" tam={18} />
+        </button>
+        <span className="treino-letra" aria-hidden="true">{letra}</span>
+        <input className="treino-nome" defaultValue={treino.nome} onBlur={renomear} aria-label="Nome do treino" />
+        <span className="treino-contagem">{items.length} {items.length === 1 ? 'exercício' : 'exercícios'}</span>
+        <div className="treino-cab-acoes">
+          <button className="mini" onClick={duplicarTreino}>Duplicar treino</button>
+          <button className="mini" onClick={excluirTreino}>Excluir treino</button>
+        </div>
       </div>
+
+      {aberto && (
+        <div className="treino-corpo">
 
       {catsTreino.length > 0 && (
         <div className="faixa-chips" role="group" aria-label="Tipo do treino">
@@ -321,12 +346,12 @@ function TreinoCard({ treino, biblioteca, cats, catsTreino, onChange, onGerencia
       </div>
 
       {items.map((it, i) => (
-        <Item key={it.id} it={it} i={i} total={items.length} cats={cats} onMove={mover} onRemove={remover}
+        <Item key={it.id} it={it} i={i} total={items.length} rotulo={`${letra}${i + 1}`} cats={cats} onMove={mover} onRemove={remover} onDuplicar={duplicarExercicio}
           onChange={onChange} onErro={setMsg} onGerenciar={onGerenciar} />
       ))}
       {items.length === 0 && <p className="muted">Nenhum exercício neste treino ainda.</p>}
 
-      <div className="row wrap">
+      <div className="row wrap treino-acoes">
         <button className="btn" onClick={() => { setModo(modo === 'add' ? null : 'add'); setMsg(''); setOk('') }}>+ Exercício</button>
         <button className="btn sec" onClick={() => { setModo(modo === 'importar' ? null : 'importar'); setPrevia(null); setMsg(''); setOk('') }}>Importar texto</button>
         <button className="btn sec" onClick={abrirModelos}>Usar modelo</button>
@@ -380,8 +405,16 @@ function TreinoCard({ treino, biblioteca, cats, catsTreino, onChange, onGerencia
           ))}
         </div>
       )}
-    </div>
+        </div>
+      )}
+    </section>
   )
+}
+
+// Letra do dia: vem do nome ("Treino B") quando existe; senão, da posição na ficha.
+const letraDoTreino = (t, idx) => {
+  const m = /^\s*treino\s+([a-z])\b/i.exec(t.nome || '')
+  return m ? m[1].toUpperCase() : String.fromCharCode(65 + (idx % 26))
 }
 
 export default function Editor({ ficha, onVoltar }) {
@@ -434,8 +467,17 @@ export default function Editor({ ficha, onVoltar }) {
       <h3>{ficha.nome}</h3>
       {legado && <p className="erro">Para usar tipos de série (aquecimento, backoff, dropset e outros), rode a migração da Etapa 7.1 no Supabase.</p>}
       {msg && <p className="erro">{msg}</p>}
-      {treinos.map(t => (
-        <TreinoCard key={t.id} treino={t} biblioteca={biblioteca} cats={legado ? [] : cats} catsTreino={catsTreino} onChange={carregar} onGerenciar={() => setGerenciar(true)} />
+      {treinos.length > 1 && (
+        <div className="treino-nav" role="navigation" aria-label="Ir para o treino">
+          {treinos.map((t, idx) => (
+            <button key={t.id} className="chip" onClick={() => { const el = document.getElementById(`treino-${t.id}`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}>
+              {letraDoTreino(t, idx)} · {t.nome}
+            </button>
+          ))}
+        </div>
+      )}
+      {treinos.map((t, idx) => (
+        <TreinoCard key={t.id} treino={t} letra={letraDoTreino(t, idx)} proximaOrdem={treinos.reduce((m, x) => Math.max(m, (x.ordem ?? 0) + 1), 0)} biblioteca={biblioteca} cats={legado ? [] : cats} catsTreino={catsTreino} onChange={carregar} onGerenciar={() => setGerenciar(true)} />
       ))}
       <button className="btn" onClick={novoTreino}>+ Novo treino</button>
     </>
