@@ -6,6 +6,7 @@ import Categorias from './Categorias'
 import Etiqueta from './Etiqueta'
 import Menu from './Menu'
 import { CabecalhoPagina } from './Cabecalho'
+import { GRUPOS, lerGrupos, alternarGrupo } from './grupos'
 
 export function ytEmbed(url) {
   if (!url) return null
@@ -13,10 +14,7 @@ export function ytEmbed(url) {
   return m ? `https://www.youtube.com/embed/${m[1]}` : null
 }
 
-export const GRUPOS = [
-  'Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Antebraço', 'Abdômen', 'Lombar', 'Trapézio',
-  'Quadríceps', 'Posterior de coxa', 'Glúteos', 'Adutores', 'Abdutores', 'Panturrilha', 'Cardio', 'Corpo inteiro',
-]
+export { GRUPOS }   // a lista agora fica em grupos.js; continua disponível aqui para quem já importava
 
 const vazio = { nome: '', grupo_muscular: '', video_url: '', orientacoes: '' }
 
@@ -56,16 +54,18 @@ export default function Exercicios() {
   }
 
   const set = campo => e => setForm({ ...form, [campo]: e.target.value })
-  const usados = lista.map(x => x.grupo_muscular).filter(Boolean)
-  const gruposFiltro = [...GRUPOS.filter(g => usados.includes(g)), ...[...new Set(usados)].filter(g => !GRUPOS.includes(g))]
+  // Um exercício pode ter mais de um grupo: o filtro mostra o exercício em cada um deles
+  const usados = [...new Set(lista.flatMap(x => lerGrupos(x.grupo_muscular)))]
+  const gruposFiltro = [...GRUPOS.filter(g => usados.includes(g)), ...usados.filter(g => !GRUPOS.includes(g))]
   const filtrados = lista.filter(x =>
-    (!grupo || x.grupo_muscular === grupo) &&
+    (!grupo || lerGrupos(x.grupo_muscular).includes(grupo)) &&
     `${x.nome} ${x.grupo_muscular || ''}`.toLowerCase().includes(busca.toLowerCase()))
 
   if (mostrarCats) return <Categorias onVoltar={() => setMostrarCats(false)} trilha={[{ rotulo: 'Exercícios', onClick: () => setMostrarCats(false) }, { rotulo: 'Tipos de série' }]} />
 
   if (form) {
-    const opcoes = form.grupo_muscular && !GRUPOS.includes(form.grupo_muscular) ? [...GRUPOS, form.grupo_muscular] : GRUPOS
+    const marcados = lerGrupos(form.grupo_muscular)
+    const opcoes = [...GRUPOS, ...marcados.filter(g => !GRUPOS.includes(g))]   // mantém grupos antigos fora da lista padrão
     return (
       <>
       <CabecalhoPagina trilha={[{ rotulo: 'Exercícios', onClick: () => { setForm(null); setMsg('') } }, { rotulo: form.id ? form.nome || 'Editar' : 'Novo exercício' }]} titulo={form.id ? 'Editar exercício' : 'Novo exercício'} />
@@ -73,12 +73,21 @@ export default function Exercicios() {
         <label className="campo-rotulo">Nome do exercício
           <input value={form.nome} onChange={set('nome')} required />
         </label>
-        <label className="campo-rotulo">Grupo muscular
-          <select value={form.grupo_muscular || ''} onChange={set('grupo_muscular')}>
-            <option value="">Escolha o grupo muscular</option>
-            {opcoes.map(g => <option key={g} value={g}>{g}</option>)}
-          </select>
-        </label>
+        <fieldset className="grupos-escolha">
+          <legend className="campo-rotulo">Grupos musculares</legend>
+          <p className="muted pequeno">Marque um ou mais. {marcados.length > 0 ? `Selecionados: ${marcados.join(', ')}.` : 'Nenhum selecionado.'}</p>
+          <div className="faixa-chips quebra" role="group" aria-label="Grupos musculares do exercício">
+            {opcoes.map(g => {
+              const on = marcados.includes(g)
+              return (
+                <button key={g} type="button" className={'chip' + (on ? ' on' : '')} aria-pressed={on}
+                  onClick={() => setForm({ ...form, grupo_muscular: alternarGrupo(form.grupo_muscular, g) || '' })}>
+                  {on && <Icone nome="check" tam={14} />}{g}
+                </button>
+              )
+            })}
+          </div>
+        </fieldset>
         <label className="campo-rotulo">Link do vídeo no YouTube
           <input placeholder="https://youtu.be/…" value={form.video_url || ''} onChange={set('video_url')} />
         </label>
@@ -132,7 +141,7 @@ export default function Exercicios() {
                   <button type="button" className="tl-nome" aria-expanded={abre} onClick={() => setAberto(abre ? null : ex.id)}>
                     <Icone nome="chevron" tam={14} /><strong>{ex.nome}</strong>
                   </button>
-                  <span className="tl-grupo muted">{ex.grupo_muscular || '—'}</span>
+                  <span className="tl-grupo muted" title={lerGrupos(ex.grupo_muscular).join(', ')}>{lerGrupos(ex.grupo_muscular).join(', ') || '—'}</span>
                   <span className="tl-etis">
                   <span className="tl-video">{ex.video_url ? <Etiqueta tipo="sucesso"><Icone nome="play" tam={12} /> Vídeo</Etiqueta> : <span className="muted">Sem vídeo</span>}</span>
                   <span className="tl-sit">{ex.ativo ? <Etiqueta tipo="sucesso">Ativo</Etiqueta> : <Etiqueta>Arquivado</Etiqueta>}</span>

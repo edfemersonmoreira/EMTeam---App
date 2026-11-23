@@ -121,3 +121,4 @@
 .campos-seq { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--e-3); margin-bottom: var(--e-4); }
 .campos-seq textarea, .campos-seq input { margin-bottom: 0; }
 @media (min-width: 760px) { .campos-seq { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); } .campos-seq textarea { min-height: 48px; height: 48px; } }
+.tl-grupo { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }

@@ -73,3 +73,9 @@
 /* ----- Ações de um cartão: principal à esquerda, menu ⋯ à direita ----- */
 .acoes-cartao { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e-2); margin-top: var(--e-3); }
 .acoes-cartao .menu { margin-left: auto; }
+
+/* ----- Escolha múltipla com chips (ex.: grupos musculares do exercício) ----- */
+.grupos-escolha { margin: var(--e-2) 0; padding: 0; border: 0; min-width: 0; }
+.grupos-escolha legend { padding: 0; margin-bottom: 2px; }
+.grupos-escolha .muted { margin: 0 0 var(--e-1); }
+.faixa-chips.quebra { flex-wrap: wrap; overflow: visible; padding: var(--e-1) 0; }
