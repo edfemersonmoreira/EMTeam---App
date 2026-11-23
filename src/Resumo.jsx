@@ -95,7 +95,7 @@ export default function ResumoTreino({ sessaoId, onFechar, rotuloFechar = 'Volta
                 </li>
               ))}
             </ul>
-            {R.compartilhado && <p className="muted pequeno">Exercícios com mais de um grupamento cadastrado dividem cada série igualmente entre eles (por exemplo, 0,5 série para cada um de dois grupamentos).</p>}
+            {R.compartilhado && <p className="muted pequeno">Exercícios com mais de um grupamento contam 1 série para cada um deles. Por isso, a soma por grupamento pode ser maior que o total de séries principais.</p>}
           </section>
         </>
       )}

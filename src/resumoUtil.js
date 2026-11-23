@@ -27,13 +27,13 @@ export function calcularResumo(registros, exercicios) {
     if (carga !== null && Number.isFinite(carga) && carga > 0 && repsValidas && reps > 0) tonelagem += carga * reps
     else semCarga++
 
-    // Séries por grupamento: cada série vale 1. Se o exercício tem mais de um grupamento cadastrado,
-    // a série é dividida igualmente entre eles (ex.: 2 grupos = 0,5 para cada), para não contar a mesma série duas vezes.
+    // Séries por grupamento: a série conta 1 para cada grupamento cadastrado no exercício
+    // (ex.: Quadríceps e Glúteos = 1 série para cada). O total de séries principais continua contando a série uma vez só.
     const ex = exercicios[r.exercicio_id]
     const grupos = lerGrupos(ex && ex.grupo_muscular)
     const lista = grupos.length ? grupos : [SEM_GRUPO]
     if (lista.length > 1) compartilhado = true
-    lista.forEach(g => { porGrupo[g] = (porGrupo[g] || 0) + 1 / lista.length })
+    lista.forEach(g => { porGrupo[g] = (porGrupo[g] || 0) + 1 })
   })
 
   const grupos = Object.entries(porGrupo)
@@ -48,7 +48,7 @@ export function calcularResumo(registros, exercicios) {
     semReps,          // séries principais concluídas sem repetições registradas
     semCarga,         // séries principais concluídas que não entram no volume (sem carga ou sem repetições)
     grupos,
-    compartilhado,    // algum exercício com mais de um grupamento (séries divididas)
+    compartilhado,    // algum exercício com mais de um grupamento (a soma por grupamento passa do total)
   }
 }
 
