@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { mensagemErro } from './erros'
 import Icone from './Icone'
 import './alunas.css'
 
@@ -19,7 +20,7 @@ export default function Alunas({ onFichas, onEvolucao, onAerobico }) {
       supabase.from('profiles').select('*').eq('papel', 'aluna').order('nome'),
       supabase.from('ultimo_treino_por_aluna').select('*'),
     ])
-    if (p.error) return setMsg(p.error.message)
+    if (p.error) return setMsg(mensagemErro(p.error))
     const mapa = Object.fromEntries((u.data || []).map(x => [x.aluna_id, x]))
     setLista(p.data.map(a => ({ ...a, ultimo: mapa[a.id]?.ultimo_treino_em, total: mapa[a.id]?.total_treinos || 0 })))
   }
@@ -31,7 +32,7 @@ export default function Alunas({ onFichas, onEvolucao, onAerobico }) {
     const { error } = await supabase.functions.invoke('criar-aluna', { body: nova })
     setSalvando(false)
     if (error) {
-      let m = error.message
+      let m = mensagemErro(error)
       try { const j = await error.context.json(); if (j.erro) m = j.erro } catch (_) {}
       return setMsg(m)
     }
@@ -43,7 +44,7 @@ export default function Alunas({ onFichas, onEvolucao, onAerobico }) {
     e.preventDefault()
     const { error } = await supabase.from('profiles')
       .update({ nome: edit.nome, telefone: edit.telefone || null }).eq('id', edit.id)
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     setEdit(null); setMsg(''); carregar()
   }
 

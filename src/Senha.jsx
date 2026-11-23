@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from './supabase'
+import { mensagemErro } from './erros'
 
 export default function Senha({ onFechar }) {
   const [s1, setS1] = useState('')
@@ -12,7 +13,7 @@ export default function Senha({ onFechar }) {
     if (s1.length < 6) return setMsg('Use pelo menos 6 caracteres.')
     if (s1 !== s2) return setMsg('As senhas não conferem.')
     const { error } = await supabase.auth.updateUser({ password: s1 })
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     setMsg(''); setOk(true)
   }
 

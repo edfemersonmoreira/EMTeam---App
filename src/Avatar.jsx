@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { supabase } from './supabase'
 import Icone from './Icone'
+import { mensagemErro, erroAmigavel } from './erros'
 
 function redimensionar(arquivo, lado = 320) {
   return new Promise((resolve, reject) => {
@@ -12,9 +13,9 @@ function redimensionar(arquivo, lado = 320) {
       c.width = c.height = lado
       c.getContext('2d').drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, lado, lado)
       URL.revokeObjectURL(url)
-      c.toBlob(b => (b ? resolve(b) : reject(new Error('Não foi possível processar a foto.'))), 'image/jpeg', 0.85)
+      c.toBlob(b => (b ? resolve(b) : reject(erroAmigavel('Não foi possível processar a foto.'))), 'image/jpeg', 0.85)
     }
-    img.onerror = () => reject(new Error('Arquivo de imagem inválido.'))
+    img.onerror = () => reject(erroAmigavel('Arquivo de imagem inválido. Escolha uma foto em JPG ou PNG.'))
     img.src = url
   })
 }
@@ -41,7 +42,7 @@ export default function Avatar({ perfil, onErro }) {
       if (r.error) throw r.error
       setUrl(novo)
     } catch (err) {
-      onErro('Não foi possível enviar a foto. ' + (err.message || ''))
+      onErro(mensagemErro(err, 'Não foi possível enviar a foto. Tente novamente.'))
     }
     setEnviando(false)
   }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { mensagemErro } from './erros'
 import Categorias from './Categorias'
 import Icone from './Icone'
 import { inserirExercicios, linhasDoModelo } from './prescricao'
@@ -126,12 +127,12 @@ function Item({ it, i, total, rotulo, cats, onMove, onRemove, onDuplicar, onChan
     const { error } = await supabase.from('treino_exercicio_series').insert({
       treino_exercicio_id: it.id, categoria_id: alvo.id, ordem: blocos.length, series: 1, repeticoes: '10', descanso_seg: 60,
     })
-    if (error) return onErro(error.message)
+    if (error) return onErro(mensagemErro(error))
     onErro(''); onChange()
   }
   async function salvarBloco(b, campos) {
     const { error } = await supabase.from('treino_exercicio_series').update(campos).eq('id', b.id)
-    return error ? error.message : ''
+    return error ? mensagemErro(error) : ''
   }
   async function moverBloco(j, d) {
     const k = j + d
@@ -143,7 +144,7 @@ function Item({ it, i, total, rotulo, cats, onMove, onRemove, onDuplicar, onChan
   async function removerBloco(b) {
     if (blocos.length <= 1) return onErro('O exercício precisa ter pelo menos um tipo de série.')
     const { error } = await supabase.from('treino_exercicio_series').delete().eq('id', b.id)
-    if (error) return onErro(error.message)
+    if (error) return onErro(mensagemErro(error))
     onChange()
   }
 
@@ -151,7 +152,7 @@ function Item({ it, i, total, rotulo, cats, onMove, onRemove, onDuplicar, onChan
     <div className="item item-ex">
       <div className="item-cab">
         <span className="ex-rotulo" title={`Exercício ${i + 1} deste treino`}>{rotulo}</span>
-        <strong className="ex-nome">{it.exercicios?.nome}</strong>
+        <strong className="item-nome">{it.exercicios?.nome}</strong>
         <div className="item-acoes">
           <button className="mini" disabled={i === 0} onClick={() => onMove(i, -1)} aria-label="Subir exercício">↑</button>
           <button className="mini" disabled={i === total - 1} onClick={() => onMove(i, 1)} aria-label="Descer exercício">↓</button>
@@ -194,7 +195,7 @@ function TreinoCard({ treino, letra, proximaOrdem, biblioteca, cats, catsTreino,
   // Insere exercícios no fim do treino, cada um com seus tipos de série (padrão: um bloco Principal). Se algo falhar, desfaz o que foi copiado.
   async function inserir(linhas) {
     const erro = await inserirExercicios(treino.id, items.length, linhas, cats)
-    if (erro) return setMsg(erro.message)
+    if (erro) return setMsg(mensagemErro(erro))
     setMsg(''); setModo(null); setPrevia(null); setTexto(''); onChange()
   }
 
@@ -222,9 +223,9 @@ function TreinoCard({ treino, letra, proximaOrdem, biblioteca, cats, catsTreino,
     const depois = items.slice(pos + 1)
     const r = await Promise.all(depois.map((x, k) => supabase.from('treino_exercicios').update({ ordem: pos + 2 + k }).eq('id', x.id)))
     const falha = r.find(x => x.error)
-    if (falha) return setMsg(falha.error.message)
+    if (falha) return setMsg(mensagemErro(falha.error))
     const erro = await inserirExercicios(treino.id, pos + 1, [linhaDe(it)], cats)
-    if (erro) return setMsg(erro.message)
+    if (erro) return setMsg(mensagemErro(erro))
     setMsg(''); onChange()
   }
 
@@ -233,11 +234,11 @@ function TreinoCard({ treino, letra, proximaOrdem, biblioteca, cats, catsTreino,
     const novo = { ficha_id: treino.ficha_id, nome: `${treino.nome} (cópia)`, ordem: proximaOrdem }
     if ('categoria_id' in treino && treino.categoria_id) novo.categoria_id = treino.categoria_id
     const { data, error } = await supabase.from('treinos').insert(novo).select('id').single()
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     const erro = await inserirExercicios(data.id, 0, items.map(linhaDe), cats)
     if (erro) {
       await supabase.from('treinos').delete().eq('id', data.id)   // não deixa um treino pela metade
-      return setMsg('Não foi possível duplicar o treino e nada foi alterado na ficha. ' + erro.message)
+      return setMsg('Não foi possível duplicar o treino e nada foi alterado na ficha. ' + mensagemErro(erro, ''))
     }
     setMsg(''); onChange()
   }
@@ -258,7 +259,7 @@ function TreinoCard({ treino, letra, proximaOrdem, biblioteca, cats, catsTreino,
     const nome = window.prompt('Nome do modelo:', treino.nome)
     if (!nome) return
     const { data, error } = await supabase.from('modelos').insert({ nome }).select().single()
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     const linhas = items.map((x, k) => {
       const l = {
         modelo_id: data.id, exercicio_id: x.exercicio_id, ordem: k, series: x.series,
@@ -270,7 +271,7 @@ function TreinoCard({ treino, letra, proximaOrdem, biblioteca, cats, catsTreino,
       return l
     })
     const { error: e2 } = await supabase.from('modelo_itens').insert(linhas)
-    if (e2) setMsg(e2.message); else { setMsg(''); setOk('Modelo salvo.') }
+    if (e2) setMsg(mensagemErro(e2)); else { setMsg(''); setOk('Modelo salvo.') }
   }
 
   async function abrirModelos() {
@@ -281,7 +282,7 @@ function TreinoCard({ treino, letra, proximaOrdem, biblioteca, cats, catsTreino,
 
   async function usarModelo(m) {
     const { data, error } = await supabase.from('modelo_itens').select('*').eq('modelo_id', m.id).order('ordem')
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     inserir(linhasDoModelo(data))
   }
 
@@ -435,7 +436,7 @@ export default function Editor({ ficha, onVoltar }) {
         .eq('ficha_id', ficha.id).order('ordem')
       setLegado(true)
     } else setLegado(false)
-    if (r.error) setMsg(r.error.message); else setTreinos(r.data)
+    if (r.error) setMsg(mensagemErro(r.error)); else setTreinos(r.data)
   }
   async function carregarCats() {
     const { data, error } = await supabase.from('categorias_serie').select('*').order('ordem')
@@ -456,7 +457,7 @@ export default function Editor({ ficha, onVoltar }) {
   async function novoTreino() {
     const nome = 'Treino ' + String.fromCharCode(65 + treinos.length)
     const { error } = await supabase.from('treinos').insert({ ficha_id: ficha.id, nome, ordem: treinos.length })
-    if (error) setMsg(error.message); else carregar()
+    if (error) setMsg(mensagemErro(error)); else carregar()
   }
 
   if (gerenciar) return <Categorias onVoltar={() => { setGerenciar(false); carregarCats(); carregar() }} />

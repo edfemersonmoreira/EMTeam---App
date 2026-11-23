@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { mensagemErro } from './erros'
 import Icone from './Icone'
 import Categorias from './Categorias'
 
@@ -27,7 +28,7 @@ export default function Exercicios() {
 
   async function carregar() {
     const { data, error } = await supabase.from('exercicios').select('*').order('nome')
-    if (error) setMsg(error.message)
+    if (error) setMsg(mensagemErro(error))
     else setLista(data)
   }
   useEffect(() => { carregar() }, [])
@@ -39,7 +40,7 @@ export default function Exercicios() {
     const { error } = id
       ? await supabase.from('exercicios').update(campos).eq('id', id)
       : await supabase.from('exercicios').insert(campos)
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     setForm(null); setMsg(''); carregar()
   }
 

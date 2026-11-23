@@ -12,7 +12,7 @@ header .logo { height: 28px; }
 /* Anilha atrás da logo: centrada no quadro da logo (49% da altura, o centro visual: as letras pesam um pouco mais no alto) e proporcional à largura dela */
 .logo-marca::before {
   content: ''; position: absolute; left: 50%; top: 49%; width: 180%; aspect-ratio: 1; transform: translate(-50%, -50%); z-index: -1; pointer-events: none;
-  background: radial-gradient(circle closest-side, transparent 0 70.4%, rgba(0, 128, 128, .22) 70.4% 75.6%, transparent 75.6% 85.9%, rgba(32, 178, 170, .16) 85.9% 87%, transparent 87% 99.3%, rgba(32, 178, 170, .10) 99.3% 100%, transparent 100%);
+  background: radial-gradient(circle closest-side, transparent 0 70.4%, rgba(0, 128, 128, .22) 70.4% 75.6%, transparent 75.6% 85.9%, rgb(var(--acento-rgb) / .16) 85.9% 87%, transparent 87% 99.3%, rgb(var(--acento-rgb) / .10) 99.3% 100%, transparent 100%);
 }
 
 /* Login: anilha atrás da logo e padrão EM bem suave, que some em direção ao centro */
@@ -43,7 +43,7 @@ body:has(.login) {
 .linha-sec:hover, .atalho:hover { --sup: var(--hover); }
 
 /* Foto da aluna: segundo anel fino, como uma anilha */
-.avatar { box-shadow: 0 0 0 3px var(--bg), 0 0 0 4.5px rgba(32, 178, 170, .45); }
+.avatar { box-shadow: 0 0 0 3px var(--bg), 0 0 0 4.5px rgb(var(--acento-rgb) / .45); }
 
 /* Régua de carga: progresso dos exercícios (um traço por exercício) */
 .regua-prog { display: flex; align-items: flex-end; gap: 4px; height: 22px; margin-top: 6px; }
@@ -56,5 +56,5 @@ body:has(.login) {
   height: 14px; margin: 6px 0 16px; border-bottom: 2px solid var(--verde);
   background:
     linear-gradient(90deg, var(--verde2) 0 2px, transparent 2px) 0 100% / 50px 14px repeat-x,
-    linear-gradient(90deg, #2f6a68 0 2px, transparent 2px) 0 100% / 10px 7px repeat-x;
+    linear-gradient(90deg, var(--regua-sec) 0 2px, transparent 2px) 0 100% / 10px 7px repeat-x;
 }

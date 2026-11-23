@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { mensagemErro } from './erros'
 import Editor from './Editor'
 import { VALIDADE_PADRAO_SEMANAS, dataValidade, vencimentoDaFicha, diasParaVencer, fmtData } from './painelUtil'
 
@@ -21,7 +22,7 @@ export default function Fichas({ aluna, onVoltar }) {
   async function carregar() {
     const { data, error } = await supabase.from('fichas').select('*')
       .eq('aluna_id', aluna.id).order('criado_em', { ascending: false })
-    if (error) setMsg(error.message); else setFichas(data)
+    if (error) setMsg(mensagemErro(error)); else setFichas(data)
   }
   useEffect(() => {
     carregar()
@@ -35,7 +36,7 @@ export default function Fichas({ aluna, onVoltar }) {
     let r = await supabase.from('fichas').insert({ ...base, validade_em: dataValidade(novo.semanas) }).select().single()
     if (faltaColuna(r.error)) r = await supabase.from('fichas').insert(base).select().single()
     const { data, error } = r
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     await supabase.from('treinos').insert({ ficha_id: data.id, nome: 'Treino A', ordem: 0 })
     setNovo(null); setMsg(''); setEditar(data)
   }
@@ -43,20 +44,20 @@ export default function Fichas({ aluna, onVoltar }) {
   async function ativar(f) {
     setOk('')
     const a = await supabase.from('fichas').update({ ativa: false }).eq('aluna_id', aluna.id).eq('ativa', true)
-    if (a.error) return setMsg(a.error.message)
+    if (a.error) return setMsg(mensagemErro(a.error))
     const b = await supabase.from('fichas').update({ ativa: true, arquivada_em: null }).eq('id', f.id)
-    if (b.error) return setMsg(b.error.message)
+    if (b.error) return setMsg(mensagemErro(b.error))
     setMsg(''); carregar()
   }
 
   async function mudar(f, campos) {
     const { error } = await supabase.from('fichas').update(campos).eq('id', f.id)
-    if (error) setMsg(error.message); else { setMsg(''); carregar() }
+    if (error) setMsg(mensagemErro(error)); else { setMsg(''); carregar() }
   }
 
   async function salvarValidade(f) {
     const { error } = await supabase.from('fichas').update({ validade_em: dataValidade(renovar.semanas) }).eq('id', f.id)
-    if (error) return setMsg(faltaColuna(error) ? 'A validade ainda não está disponível no banco. Rode a migração da validade antes.' : error.message)
+    if (error) return setMsg(faltaColuna(error) ? 'A validade ainda não está disponível no banco. Rode a migração da validade antes.' : mensagemErro(error))
     setRenovar(null); setMsg(''); carregar()
   }
 
@@ -65,11 +66,11 @@ export default function Fichas({ aluna, onVoltar }) {
     const { data: novaId, error } = await supabase.rpc('duplicar_ficha', {
       p_ficha_id: dup.id, p_aluna_destino: destino, p_nome: dup.novoNome || null,
     })
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     // A função do banco devolve o id da cópia: gravamos nela a validade escolhida.
     if (novaId) {
       const v = await supabase.from('fichas').update({ validade_em: dataValidade(dup.semanas) }).eq('id', novaId)
-      if (v.error && !faltaColuna(v.error)) return setMsg(v.error.message)
+      if (v.error && !faltaColuna(v.error)) return setMsg(mensagemErro(v.error))
     }
     const nomeDest = alunas.find(a => a.id === destino)?.nome
     setOk(destino === aluna.id ? 'Ficha duplicada (inativa).' : `Ficha copiada para ${nomeDest} (inativa).`)

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabase'
+import { mensagemErro } from './erros'
 import './editor.css'
 import './aluna.css'
 
@@ -16,14 +17,14 @@ function Grafico({ pontos }) {
   const Y = y => (ymax === ymin ? (H - 20) / 2 : H - 28 - ((y - ymin) / (ymax - ymin)) * (H - 28 - 16))
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="grafico">
-      <polyline points={pontos.map(p => `${X(p.t)},${Y(p.y)}`).join(' ')} fill="none" stroke="#008080" strokeWidth="2.5" />
-      <line x1={P} y1={H - 20} x2={W - P} y2={H - 20} stroke="#008080" strokeWidth="2" />
-      {pontos.map((p, i) => <line key={'t' + i} x1={X(p.t)} y1={H - 20} x2={X(p.t)} y2={H - 14} stroke="#20B2AA" strokeWidth="2" />)}
-      {pontos.map((p, i) => <circle key={i} cx={X(p.t)} cy={Y(p.y)} r="4" fill="#20B2AA" />)}
-      <text x={P} y={H - 6} fontSize="10" fill="#5b6b6b">{fmtCurto(t0)}</text>
-      <text x={W - P} y={H - 6} fontSize="10" fill="#5b6b6b" textAnchor="end">{fmtCurto(t1)}</text>
-      <text x="4" y="12" fontSize="10" fill="#5b6b6b">{ymax} kg</text>
-      {ymin !== ymax && <text x="4" y={H - 30} fontSize="10" fill="#5b6b6b">{ymin} kg</text>}
+      <polyline className="g-linha" points={pontos.map(p => `${X(p.t)},${Y(p.y)}`).join(' ')} fill="none" strokeWidth="2.5" />
+      <line className="g-eixo" x1={P} y1={H - 20} x2={W - P} y2={H - 20} strokeWidth="2" />
+      {pontos.map((p, i) => <line key={'t' + i} x1={X(p.t)} y1={H - 20} x2={X(p.t)} y2={H - 14} className="g-marca" strokeWidth="2" />)}
+      {pontos.map((p, i) => <circle key={i} cx={X(p.t)} cy={Y(p.y)} r="4" className="g-ponto" />)}
+      <text x={P} y={H - 6} fontSize="10">{fmtCurto(t0)}</text>
+      <text x={W - P} y={H - 6} fontSize="10" textAnchor="end">{fmtCurto(t1)}</text>
+      <text x="4" y="12" fontSize="10">{ymax} kg</text>
+      {ymin !== ymax && <text x="4" y={H - 30} fontSize="10">{ymin} kg</text>}
     </svg>
   )
 }
@@ -57,7 +58,7 @@ export default function Historico({ alunaId, titulo, onVoltar }) {
     ;(async () => {
       let r = await consulta('registros_principais')
       if (r.error) r = await consulta('registros_series')     // banco ainda sem a migração da Etapa 7.1
-      if (r.error) return setMsg(r.error.message)
+      if (r.error) return setMsg(mensagemErro(r.error))
       const ids = [...new Set(r.data.map(x => x.exercicio_id))]
       const nomes = {}
       if (ids.length) {

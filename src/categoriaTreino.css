@@ -1,8 +1,8 @@
 /* Tipo de treino (superiores e inferiores): ícone + nome, nunca só cor */
-.cat-treino { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 99px; border: 1px solid var(--borda2); color: var(--txt2); font-size: 12px; font-weight: 700; white-space: nowrap; vertical-align: middle; }
-.bloco .cat-treino { border-color: rgba(255, 255, 255, .45); color: #fff; }
+.cat-treino { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: var(--r-pill); border: 1px solid var(--borda2); color: var(--txt2); font-size: var(--t-xs); font-weight: 700; white-space: nowrap; vertical-align: middle; }
+.bloco .cat-treino { border-color: rgba(255, 255, 255, .45); color: var(--sobre-verde); }
 .data.topo-cat { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.num.cat-ico { color: var(--verde2); border-color: rgba(32, 178, 170, .5); }
+.num.cat-ico { color: var(--verde2); border-color: rgb(var(--acento-rgb) / .5); }
 .chip { display: inline-flex; align-items: center; gap: 6px; }
 
 /* Círculos dos dias da semana: ícone do tipo de treino e, quando feito, um pequeno selo de confirmação */

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { mensagemErro } from './erros'
 import { ytEmbed } from './Exercicios'
 import Icone from './Icone'
 import { hojeLocal, chaveFeito, progresso } from './alongUtil'
@@ -19,7 +20,7 @@ export default function AlongAluna({ perfil, onVoltar }) {
     const s = await supabase.from('sequencias_alongamento')
       .select('id, nome, descricao, sequencia_alongamento_itens(id, ordem, orientacao, alongamento_id, alongamentos(nome, descricao, video_url))')
       .eq('ativa', true).eq('modelo', false).order('criado_em')
-    if (s.error) return setMsg(s.error.message)
+    if (s.error) return setMsg(mensagemErro(s.error))
     setSeqs(s.data)
     const r = await supabase.from('alongamento_registros').select('sequencia_id, alongamento_id, concluido')
       .eq('aluna_id', perfil.id).eq('data', hoje)
@@ -38,7 +39,7 @@ export default function AlongAluna({ perfil, onVoltar }) {
       aluna_id: perfil.id, sequencia_id: seq.id, alongamento_id: item.alongamento_id,
       data: hoje, concluido: novo, registrado_em: new Date().toISOString(),
     }, { onConflict: 'aluna_id,sequencia_id,alongamento_id,data' })
-    if (error) { setFeitos(f => ({ ...f, [k]: !novo })); setMsg(error.message) } else setMsg('')
+    if (error) { setFeitos(f => ({ ...f, [k]: !novo })); setMsg(mensagemErro(error)) } else setMsg('')
   }
 
   const seq = seqs && seqs.find(s => s.id === sel)

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { mensagemErro } from './erros'
 import { ytEmbed } from './Exercicios'
 import Icone from './Icone'
 import { mover, ultimasDatas } from './alongUtil'
@@ -30,7 +31,7 @@ function Biblioteca() {
     const { error } = id
       ? await supabase.from('alongamentos').update(campos).eq('id', id)
       : await supabase.from('alongamentos').insert(campos)
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     setForm(null); setMsg(''); carregar()
   }
   async function alternar(x) {
@@ -92,7 +93,7 @@ function ItemSeq({ it, i, total, onMove, onRemove, onErro }) {
   const [o, setO] = useState(it.orientacao ?? '')
   async function salvar() {
     const { error } = await supabase.from('sequencia_alongamento_itens').update({ orientacao: o || null }).eq('id', it.id)
-    onErro(error ? error.message : '')
+    onErro(error ? mensagemErro(error) : '')
   }
   return (
     <div className="item">
@@ -123,11 +124,11 @@ function EditorSequencia({ id, onVoltar }) {
 
   async function carregar() {
     const s = await supabase.from('sequencias_alongamento').select('*').eq('id', id).single()
-    if (s.error) return setMsg(s.error.message)
+    if (s.error) return setMsg(mensagemErro(s.error))
     setSeq(s.data); setCampos({ nome: s.data.nome, descricao: s.data.descricao || '' })
     const it = await supabase.from('sequencia_alongamento_itens')
       .select('*, alongamentos(nome, descricao, video_url)').eq('sequencia_id', id).order('ordem')
-    if (it.error) return setMsg(it.error.message)
+    if (it.error) return setMsg(mensagemErro(it.error))
     setItens(it.data)
     if (!s.data.modelo) {
       const [al, ac, rg] = await Promise.all([
@@ -148,11 +149,11 @@ function EditorSequencia({ id, onVoltar }) {
   async function salvarCampos() {
     if (!campos.nome.trim()) return setMsg('Dê um nome à sequência.')
     const { error } = await supabase.from('sequencias_alongamento').update({ nome: campos.nome.trim(), descricao: campos.descricao.trim() || null }).eq('id', id)
-    setMsg(error ? error.message : '')
+    setMsg(error ? mensagemErro(error) : '')
   }
   async function adicionar(a) {
     const { error } = await supabase.from('sequencia_alongamento_itens').insert({ sequencia_id: id, alongamento_id: a.id, ordem: itens.length })
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     setMsg(''); setAdicionando(false); setBusca(''); carregar()
   }
   async function moverItem(i, d) {
@@ -163,7 +164,7 @@ function EditorSequencia({ id, onVoltar }) {
   }
   async function remover(it) {
     const { error } = await supabase.from('sequencia_alongamento_itens').delete().eq('id', it.id)
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     carregar()
   }
   async function alternarAcesso(a) {
@@ -171,7 +172,7 @@ function EditorSequencia({ id, onVoltar }) {
     const { error } = tem
       ? await supabase.from('sequencia_alongamento_alunas').delete().eq('sequencia_id', id).eq('aluna_id', a.id)
       : await supabase.from('sequencia_alongamento_alunas').insert({ sequencia_id: id, aluna_id: a.id })
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     setAcesso({ ...acesso, [a.id]: !tem })
   }
   async function alternarAtiva() {
@@ -245,21 +246,21 @@ function Listas({ modelo, onAbrir }) {
     const nome = window.prompt(modelo ? 'Nome do novo modelo:' : 'Nome da nova sequência:')
     if (!nome || !nome.trim()) return
     const { data, error } = await supabase.from('sequencias_alongamento').insert({ nome: nome.trim(), modelo }).select().single()
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     onAbrir(data.id)
   }
   async function copiar(s, paraModelo) {
     const nome = window.prompt(paraModelo ? 'Nome do modelo:' : 'Nome da nova sequência:', s.nome)
     if (nome === null) return
     const { data, error } = await supabase.rpc('copiar_sequencia', { p_origem: s.id, p_nome: nome.trim(), p_modelo: paraModelo })
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     setMsg(''); setOk(paraModelo ? 'Modelo salvo na aba Modelos.' : 'Sequência criada. Abra para escolher as alunas.')
     if (!paraModelo) onAbrir(data); else carregar()
   }
   async function excluir(s) {
     if (!window.confirm(`Excluir "${s.nome}"? Os registros já feitos pelas alunas continuam salvos.`)) return
     const { error } = await supabase.from('sequencias_alongamento').delete().eq('id', s.id)
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     carregar()
   }
 

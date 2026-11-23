@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { mensagemErro } from './erros'
 import Icone from './Icone'
 import { PSE_ROTULOS, rotuloPse, fmtDuracao, ativo } from './aerobicoUtil'
 import './aerobico.css'
@@ -23,13 +24,13 @@ function Prescricao({ p, onMudou, onErro }) {
       pse_desejada: x.pse_desejada === '' ? null : parseInt(x.pse_desejada, 10),
       orientacoes: x.orientacoes.trim() || null,
     }).eq('id', p.id)
-    onErro(error ? error.message : '')
+    onErro(error ? mensagemErro(error) : '')
   }
   async function alternar() { await supabase.from('aerobico_prescricoes').update({ ativa: !p.ativa }).eq('id', p.id); onMudou() }
   async function excluir() {
     if (!window.confirm(`Excluir a prescrição "${p.modalidade}"? As atividades já registradas continuam salvas.`)) return
     const { error } = await supabase.from('aerobico_prescricoes').delete().eq('id', p.id)
-    if (error) return onErro(error.message)
+    if (error) return onErro(mensagemErro(error))
     onMudou()
   }
   const set = c => e => setV({ ...v, [c]: e.target.value })
@@ -72,7 +73,7 @@ export default function AerobicoAdmin({ aluna, onVoltar }) {
 
   async function nova() {
     const { error } = await supabase.from('aerobico_prescricoes').insert({ aluna_id: aluna.id, modalidade: 'Esteira', tempo_previsto_min: 30, ordem: presc.length })
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     setMsg(''); carregar()
   }
 

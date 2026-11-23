@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
+import { mensagemErro } from './erros'
 import { ytEmbed } from './Exercicios'
 import Icone from './Icone'
 import { blocosDoExercicio, expandir, chaveUltimo, resumo } from './seriesUtil'
@@ -34,7 +35,7 @@ export default function Executar({ treino, perfil, onSair }) {
         legado.current = true
         te = await supabase.from('treino_exercicios').select('*, exercicios(*)').eq('treino_id', treino.id).order('ordem')
       }
-      if (te.error) { setMsg(te.error.message); return setCarregando(false) }
+      if (te.error) { setMsg(mensagemErro(te.error)); return setCarregando(false) }
       const lista = te.data.map(it => { const blocos = blocosDoExercicio(it); return { ...it, blocos, slots: expandir(blocos) } })
       setItens(lista)
 
@@ -46,7 +47,7 @@ export default function Executar({ treino, perfil, onSair }) {
       if (!sess) {
         const n = await supabase.from('sessoes')
           .insert({ aluna_id: perfil.id, treino_id: treino.id, treino_nome: treino.nome }).select().single()
-        if (n.error) { setMsg(n.error.message); return setCarregando(false) }
+        if (n.error) { setMsg(mensagemErro(n.error)); return setCarregando(false) }
         sess = n.data
       }
       setSessao(sess)
@@ -109,7 +110,7 @@ export default function Executar({ treino, perfil, onSair }) {
     if (error && !legado.current && /categoria_id|bloco_id/.test(error.message)) {
       ;({ error } = await supabase.from('registros_series').upsert(base, { onConflict: 'sessao_id,exercicio_id,numero_serie' }))
     }
-    setMsg(error ? error.message : '')
+    setMsg(error ? mensagemErro(error) : '')
   }
 
   function alternar(ex, slot, ultimaDoTreino) {
@@ -128,7 +129,7 @@ export default function Executar({ treino, perfil, onSair }) {
       .select('carga_kg, repeticoes, registrado_em').eq('aluna_id', perfil.id)
       .eq('exercicio_id', ex.exercicio_id).eq('concluida', true).not('carga_kg', 'is', null)
       .order('registrado_em', { ascending: false }).limit(60)
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     const m = {}
     data.forEach(r => {
       const k = new Date(r.registrado_em).toLocaleDateString('sv-SE')
@@ -145,7 +146,7 @@ export default function Executar({ treino, perfil, onSair }) {
     const { error } = await supabase.from('sessoes').update({
       finalizada_em: new Date().toISOString(), cansaco: fim.cansaco || null, observacao: fim.obs || null,
     }).eq('id', sessao.id)
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     onSair()
   }
 

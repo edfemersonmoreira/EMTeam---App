@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { mensagemErro } from './erros'
 import Executar from './Executar'
 import Historico from './Historico'
 import AlongAluna from './AlongAluna'
@@ -32,13 +33,13 @@ export default function Aluna({ perfil }) {
 
   async function carregar() {
     const f = await supabase.from('fichas').select('*').eq('aluna_id', perfil.id).eq('ativa', true).maybeSingle()
-    if (f.error) return setMsg(f.error.message)
+    if (f.error) return setMsg(mensagemErro(f.error))
     setFicha(f.data)
     if (f.data) {
       const t = await supabase.from('treinos')
         .select('*, treino_exercicios(id, ordem, series, repeticoes, exercicios(nome, grupo_muscular))')
         .eq('ficha_id', f.data.id).order('ordem')
-      if (t.error) return setMsg(t.error.message)
+      if (t.error) return setMsg(mensagemErro(t.error))
       // Tipo do treino (superiores/inferiores). Se a migração da Etapa 8 ainda não foi rodada, a tabela não existe e os treinos aparecem sem ícone.
       const ct = await supabase.from('categorias_treino').select('*')
       const mapaCat = Object.fromEntries((ct.error ? [] : ct.data).map(c => [c.id, c]))
@@ -53,7 +54,7 @@ export default function Aluna({ perfil }) {
     const desde = (iniMes < iniSemana ? iniMes : iniSemana).toISOString()
     const s = await supabase.from('sessoes').select('treino_id, finalizada_em')
       .eq('aluna_id', perfil.id).not('finalizada_em', 'is', null).gte('finalizada_em', desde)
-    if (s.error) return setMsg(s.error.message)
+    if (s.error) return setMsg(mensagemErro(s.error))
     const fd = {}, fh = {}
     let n = 0
     ;(s.data || []).forEach(x => {

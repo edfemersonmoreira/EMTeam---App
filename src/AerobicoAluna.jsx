@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
+import { mensagemErro } from './erros'
 import Icone from './Icone'
 import { hojeLocal } from './alongUtil'
 import { PSE_ROTULOS, rotuloPse, fmtRelogio, fmtDuracao, decorrido, pausar, retomar, finalizar, ativo, pendente } from './aerobicoUtil'
@@ -24,7 +25,7 @@ export default function AerobicoAluna({ perfil, onVoltar }) {
       supabase.from('aerobico_prescricoes').select('*').eq('aluna_id', perfil.id).eq('ativa', true).order('ordem').order('criado_em'),
       supabase.from('aerobico_registros').select('*').eq('aluna_id', perfil.id).order('iniciada_em', { ascending: false }).limit(60),
     ])
-    if (p.error) return setMsg(p.error.message)
+    if (p.error) return setMsg(mensagemErro(p.error))
     setPresc(p.data); setRegs(r.data || [])
   }
 
@@ -50,7 +51,7 @@ export default function AerobicoAluna({ perfil, onVoltar }) {
 
   async function atualizar(reg, patch) {
     const { data, error } = await supabase.from('aerobico_registros').update(patch).eq('id', reg.id).select().single()
-    if (error) { setMsg(error.message); return null }
+    if (error) { setMsg(mensagemErro(error)); return null }
     setRegs(rs => rs.map(x => (x.id === reg.id ? data : x))); setMsg('')
     return data
   }
@@ -63,7 +64,7 @@ export default function AerobicoAluna({ perfil, onVoltar }) {
     }).select().single()
     if (error) {
       if (error.code === '23505') { setMsg('Você já tem uma atividade em andamento.'); return carregar() }
-      return setMsg(error.message)
+      return setMsg(mensagemErro(error))
     }
     setRegs(rs => [data, ...rs]); setForm({ pse: null, modalidade: p.modalidade, obs: '' }); setMsg('')
   }
@@ -87,7 +88,7 @@ export default function AerobicoAluna({ perfil, onVoltar }) {
   async function descartar(reg) {
     if (!window.confirm('Descartar esta atividade? Ela não será salva.')) return
     const { error } = await supabase.from('aerobico_registros').delete().eq('id', reg.id)
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     setRegs(rs => rs.filter(x => x.id !== reg.id)); setMsg('')
   }
 

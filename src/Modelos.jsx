@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { mensagemErro } from './erros'
 import Icone from './Icone'
 import Categorias from './Categorias'
 import CategoriaTreino from './CategoriaTreino'
@@ -48,7 +49,7 @@ function ItemModelo({ it, i, total, cats, onMove, onRemove, onErro, onGerenciar 
     const { error } = await supabase.from('modelo_itens').update({
       blocos: limpar(novos), series: p.series || 1, repeticoes: p.repeticoes || '10', descanso_seg: p.descanso_seg ?? null,
     }).eq('id', it.id)
-    return error ? error.message : ''
+    return error ? mensagemErro(error) : ''
   }
   const salvarBloco = async (k, campos) => persistir(blocos.map(b => (b._k === k ? { ...b, ...campos } : b)))
   async function addBloco() {
@@ -101,11 +102,11 @@ function EditorModelo({ id, onVoltar }) {
 
   async function carregar() {
     const m = await supabase.from('modelos').select('*').eq('id', id).single()
-    if (m.error) return setMsg(m.error.message)
+    if (m.error) return setMsg(mensagemErro(m.error))
     setModelo(m.data)
     setCampos({ nome: m.data.nome, categoria: m.data.categoria || '', categoria_treino_id: m.data.categoria_treino_id || '' })
     const it = await supabase.from('modelo_itens').select('*, exercicios(nome, grupo_muscular)').eq('modelo_id', id).order('ordem')
-    if (it.error) return setMsg(it.error.message)
+    if (it.error) return setMsg(mensagemErro(it.error))
     setItens(it.data); setRecarga(r => r + 1)
   }
   useEffect(() => {
@@ -121,7 +122,7 @@ function EditorModelo({ id, onVoltar }) {
     const dados = { nome: x.nome.trim() }
     if (migrado) { dados.categoria = x.categoria.trim() || null; dados.categoria_treino_id = x.categoria_treino_id || null; dados.atualizado_em = new Date().toISOString() }
     const { error } = await supabase.from('modelos').update(dados).eq('id', id)
-    setMsg(error ? error.message : (!migrado && (novo.categoria !== undefined || novo.categoria_treino_id !== undefined) ? MSG_MIGRACAO : ''))
+    setMsg(error ? mensagemErro(error) : (!migrado && (novo.categoria !== undefined || novo.categoria_treino_id !== undefined) ? MSG_MIGRACAO : ''))
   }
   async function adicionar(ex) {
     const principal = cats.find(c => c.principal)
@@ -129,7 +130,7 @@ function EditorModelo({ id, onVoltar }) {
     const { error } = await supabase.from('modelo_itens').insert({
       modelo_id: id, exercicio_id: ex.id, ordem: itens.length, series: 3, repeticoes: '10', descanso_seg: 60, blocos: [bloco],
     })
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     setMsg(''); setAdicionando(false); setBusca(''); carregar()
   }
   async function moverItem(i, d) {
@@ -140,7 +141,7 @@ function EditorModelo({ id, onVoltar }) {
   }
   async function remover(it) {
     const { error } = await supabase.from('modelo_itens').delete().eq('id', it.id)
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     carregar()
   }
 
@@ -226,7 +227,7 @@ function InserirModelo({ modelo, cats, onFechar }) {
       const novo = { ficha_id: fichaId, nome: modelo.nome, ordem: treinos.length }
       if (modelo.categoria_treino_id) novo.categoria_id = modelo.categoria_treino_id
       const { data, error } = await supabase.from('treinos').insert(novo).select('id, nome').single()
-      if (error) { setSalvando(false); return setMsg(error.message) }
+      if (error) { setSalvando(false); return setMsg(mensagemErro(error)) }
       alvo = data.id; nomeAlvo = data.nome
     } else {
       const c = await supabase.from('treino_exercicios').select('id', { count: 'exact', head: true }).eq('treino_id', treinoId)
@@ -242,7 +243,7 @@ function InserirModelo({ modelo, cats, onFechar }) {
       // Nada fica pela metade: remove o treino que acabou de ser criado (o inserirExercicios já desfaz os exercícios copiados)
       if (treinoId === 'novo') await supabase.from('treinos').delete().eq('id', alvo)
       setSalvando(false)
-      return setMsg('Não foi possível inserir o modelo e nada foi alterado na ficha. ' + erro.message)
+      return setMsg('Não foi possível inserir o modelo e nada foi alterado na ficha. ' + mensagemErro(erro, ''))
     }
     setSalvando(false)
     setOk(`Pronto. A ficha recebeu uma cópia independente em "${nomeAlvo}". Alterar o modelo depois não muda esse treino.`)
@@ -305,7 +306,7 @@ function Biblioteca({ cats, onEditar, onInserir }) {
 
   async function carregar() {
     const { data, error } = await supabase.from('modelos').select('*, modelo_itens(id)').order('criado_em', { ascending: false })
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     setLista(data)
     const ct = await supabase.from('categorias_treino').select('*')
     setCatsTreino(ct.error ? [] : ct.data)
@@ -316,7 +317,7 @@ function Biblioteca({ cats, onEditar, onInserir }) {
     const nome = window.prompt('Nome do novo modelo:')
     if (!nome || !nome.trim()) return
     const { data, error } = await supabase.from('modelos').insert({ nome: nome.trim() }).select().single()
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     onEditar(data.id)
   }
   async function visualizar(m) {
@@ -332,22 +333,22 @@ function Biblioteca({ cats, onEditar, onInserir }) {
     if (!nome || !nome.trim()) return
     let r = await supabase.from('modelos').insert({ nome: nome.trim(), categoria: m.categoria ?? null, categoria_treino_id: m.categoria_treino_id ?? null }).select().single()
     if (r.error) r = await supabase.from('modelos').insert({ nome: nome.trim() }).select().single()   // banco sem a migração da Etapa 8
-    if (r.error) return setMsg(r.error.message)
+    if (r.error) return setMsg(mensagemErro(r.error))
     const it = await supabase.from('modelo_itens').select('*').eq('modelo_id', m.id).order('ordem')
-    if (it.error) { await supabase.from('modelos').delete().eq('id', r.data.id); return setMsg(it.error.message) }
+    if (it.error) { await supabase.from('modelos').delete().eq('id', r.data.id); return setMsg(mensagemErro(it.error)) }
     if (it.data.length) {
       const e2 = await supabase.from('modelo_itens').insert(it.data.map(x => ({
         modelo_id: r.data.id, exercicio_id: x.exercicio_id, ordem: x.ordem, series: x.series, repeticoes: x.repeticoes,
         descanso_seg: x.descanso_seg, observacao: x.observacao, blocos: x.blocos || [],
       })))
-      if (e2.error) { await supabase.from('modelos').delete().eq('id', r.data.id); return setMsg(e2.error.message) }   // não deixa um modelo pela metade
+      if (e2.error) { await supabase.from('modelos').delete().eq('id', r.data.id); return setMsg(mensagemErro(e2.error)) }   // não deixa um modelo pela metade
     }
     setMsg(''); carregar()
   }
   async function excluir(m) {
     if (!window.confirm(`Excluir o modelo "${m.nome}"? As fichas que já receberam esse modelo não são alteradas.`)) return
     const { error } = await supabase.from('modelos').delete().eq('id', m.id)
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(mensagemErro(error))
     carregar()
   }
 

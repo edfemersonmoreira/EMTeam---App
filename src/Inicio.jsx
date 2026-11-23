@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { mensagemErro } from './erros'
 import Icone from './Icone'
 import './painel.css'
 import {
@@ -49,7 +50,7 @@ export default function Inicio({ perfil, irPara, abrirAluna }) {
       supabase.from('alongamentos').select('id, ativo'),
     ])
     const falhas = []
-    const ok = (r, rotulo) => { if (r.error) { falhas.push(`${rotulo}: ${r.error.message}`); return [] } return r.data || [] }
+    const ok = (r, rotulo) => { if (r.error) { falhas.push(`${rotulo}: ${mensagemErro(r.error)}`); return [] } return r.data || [] }
     const alunas = ok(p, 'alunas')
     const nomes = Object.fromEntries(alunas.map(x => [x.id, x]))
     const exercicios = ok(ex, 'exercícios')

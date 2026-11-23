@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { mensagemErro } from './erros'
 import Icone from './Icone'
 
 export const PALETA = ['#20B2AA', '#008080', '#E0A93B', '#6FA8F5', '#A98BF0', '#E5635F', '#F0914B', '#4FC3E8', '#C8B08A', '#9BAAAA']
@@ -17,7 +18,7 @@ export default function Categorias({ onVoltar }) {
   }
   useEffect(() => { carregar() }, [])
 
-  const erro = e => (e.code === '23505' ? 'Já existe uma categoria com esse nome.' : e.message)
+  const erro = e => (e.code === '23505' ? 'Já existe uma categoria com esse nome.' : mensagemErro(e))
 
   async function adicionar(e) {
     e.preventDefault()
@@ -45,7 +46,7 @@ export default function Categorias({ onVoltar }) {
   async function excluir(c) {
     if (!window.confirm(`Excluir a categoria "${c.nome}"?`)) return
     const { error } = await supabase.from('categorias_serie').delete().eq('id', c.id)
-    if (error) return setMsg(error.code === '23503' ? 'Essa categoria já foi usada em prescrições ou registros. Desative-a em vez de excluir.' : error.message)
+    if (error) return setMsg(error.code === '23503' ? 'Essa categoria já foi usada em prescrições ou registros. Desative-a em vez de excluir.' : mensagemErro(error))
     setMsg(''); carregar()
   }
 

@@ -1,19 +1,19 @@
 /* Tipos de série e técnicas: identificação visual por categoria (cor própria) */
 .cat-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--cat, var(--verde2)); display: inline-block; flex: none; }
 .cat-tag {
-  display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 99px; white-space: nowrap;
-  border: 1px solid var(--borda2); background: var(--card); color: var(--txt); font-size: 12px; font-weight: 800;
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: var(--r-pill); white-space: nowrap;
+  border: 1px solid var(--borda2); background: var(--card); color: var(--txt); font-size: var(--t-xs); font-weight: 800;
   border: 1px solid color-mix(in srgb, var(--cat, #20B2AA) 55%, transparent);
   background: color-mix(in srgb, var(--cat, #20B2AA) 14%, transparent);
-  color: color-mix(in srgb, var(--cat, #20B2AA) var(--cat-pct), #101617);
+  color: color-mix(in srgb, var(--cat, #20B2AA) var(--cat-pct), var(--tinta));
 }
 
 /* Editor de fichas */
-.bloco-ed { border: 1px solid var(--borda); border-left: 4px solid var(--cat, var(--verde2)); border-radius: 12px; padding: 10px 12px; margin: 8px 0; background: var(--bg2); }
+.bloco-ed { border: 1px solid var(--borda); border-left: 4px solid var(--cat, var(--verde2)); border-radius: var(--r-ctl); padding: 10px 12px; margin: 8px 0; background: var(--bg2); }
 .cat-sel { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
 .cat-sel select { margin: 0; }
 .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 6px; }
-.grid4 label { font-size: 12px; color: var(--txt2); font-weight: 600; }
+.grid4 label { font-size: var(--t-xs); color: var(--txt2); font-weight: 600; }
 @media (max-width: 520px) { .grid4 { grid-template-columns: 1fr 1fr; } }
 .cat-linha { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .cat-cor { width: 32px; height: 32px; flex: none; border-radius: 50%; border: 2px solid var(--borda2); cursor: pointer; padding: 0; }
@@ -24,7 +24,7 @@
 /* Execução do treino: cada bloco tem a cor da sua categoria */
 .bloco-exec { margin-top: 18px; padding-left: 12px; border-left: 3px solid var(--cat, var(--verde2)); }
 .bloco-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-bottom: 4px; }
-.bloco-exec .serie .n { color: color-mix(in srgb, var(--cat, var(--txt2)) var(--cat-pct), #101617); }
-.bloco-exec .chk.on { background: var(--cat, var(--verde2)); border-color: var(--cat, var(--verde2)); color: #101617; }
+.bloco-exec .serie .n { color: color-mix(in srgb, var(--cat, var(--txt2)) var(--cat-pct), var(--tinta)); }
+.bloco-exec .chk.on { background: var(--cat, var(--verde2)); border-color: var(--cat, var(--verde2)); color: var(--tinta); }
 .cat-dots { display: inline-flex; gap: 4px; margin-left: 8px; vertical-align: middle; }
 .cat-dots .cat-dot { width: 7px; height: 7px; }
