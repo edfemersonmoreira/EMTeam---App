@@ -19,5 +19,3 @@
 .acesso-linha { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--borda); cursor: pointer; }
 .acesso-linha input[type='checkbox'] { width: 22px; height: 22px; margin: 0; padding: 0; accent-color: var(--verde2); flex: none; }
 
-/* Menu do admin com três abas: em telas estreitas, só o texto */
-@media (max-width: 440px) { nav button svg { display: none; } nav button { font-size: var(--t-md); padding: 0 4px; } }

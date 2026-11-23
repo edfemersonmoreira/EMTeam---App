@@ -5,6 +5,7 @@ import Categorias from './Categorias'
 import Icone from './Icone'
 import Menu from './Menu'
 import Voltar from './Voltar'
+import { CabecalhoPagina } from './Cabecalho'
 import { useDialogo } from './Dialogo'
 import { useSalvamento, StatusSalvo } from './Salvamento'
 import { inserirExercicios, linhasDoModelo } from './prescricao'
@@ -13,7 +14,7 @@ import './treinoBloco.css'
 
 const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
 
-const DIAS = [['S', 1, 'Segunda'], ['T', 2, 'Terça'], ['Q', 3, 'Quarta'], ['Q', 4, 'Quinta'], ['S', 5, 'Sexta'], ['S', 6, 'Sábado'], ['D', 0, 'Domingo']]
+const DIAS = [['Seg', 1, 'Segunda'], ['Ter', 2, 'Terça'], ['Qua', 3, 'Quarta'], ['Qui', 4, 'Quinta'], ['Sex', 5, 'Sexta'], ['Sáb', 6, 'Sábado'], ['Dom', 0, 'Domingo']]
 
 // Lê linhas como: "Agachamento livre 3x10-12 60s com pausa no fundo"
 export function parseLinhas(texto, biblioteca) {
@@ -81,29 +82,35 @@ export function Bloco({ b, i, total, cats, onSalvar, onMove, onRemove, onErro, o
   const set = c => e => setV({ ...v, [c]: e.target.value })
   const trocar = e => { if (e.target.value === '__gerenciar') return onGerenciar(); salvar({ categoria_id: e.target.value }) }
 
+  // No computador, tudo numa linha: tipo · séries · reps · carga · descanso · ações. A instrução da série
+  // aparece quando já tem texto ou quando a pessoa pede ("+ Instrução").
+  const [comObs, setComObs] = useState(!!(b.observacao))
+  const nomeCat = cat ? cat.nome : 'série'
   return (
     <div className="bloco-ed" style={{ '--cat': cat ? cat.cor : '#20B2AA' }}>
-      <div className="topo">
-        <div className="cat-sel">
-          <i className="cat-dot" />
-          <select value={v.categoria_id} onChange={trocar} aria-label="Tipo de série">
-            {opcoes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-            <option value="__gerenciar">Gerenciar categorias…</option>
-          </select>
-        </div>
-        <div className="row" style={{ margin: 0 }}>
-          <button className="mini icone" disabled={i === 0} onClick={() => onMove(i, -1)} aria-label="Subir tipo de série" title="Subir"><Icone nome="cima" tam={16} /></button>
-          <button className="mini icone" disabled={i === total - 1} onClick={() => onMove(i, 1)} aria-label="Descer tipo de série" title="Descer"><Icone nome="baixo" tam={16} /></button>
-          <button className="mini icone perigo" disabled={total <= 1} onClick={() => onRemove(b)} aria-label="Remover tipo de série" title="Remover"><Icone nome="x" tam={16} /></button>
+      <div className="bloco-linha">
+        <label className="cat-sel">
+          <span className="rot">Tipo de série</span>
+          <span className="cat-sel-campo">
+            <i className="cat-dot" />
+            <select value={v.categoria_id} onChange={trocar}>
+              {opcoes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              <option value="__gerenciar">Gerenciar categorias…</option>
+            </select>
+          </span>
+        </label>
+        <label className="campo-bloco"><span className="rot">Séries</span><input type="number" min="1" value={v.series} onChange={set('series')} onBlur={() => salvar()} /></label>
+        <label className="campo-bloco"><span className="rot">Reps</span><input value={v.repeticoes} onChange={set('repeticoes')} onBlur={() => salvar()} /></label>
+        <label className="campo-bloco"><span className="rot">Carga</span><input placeholder="opcional" value={v.carga} onChange={set('carga')} onBlur={() => salvar()} /></label>
+        <label className="campo-bloco"><span className="rot">Descanso (s)</span><input type="number" min="0" value={v.descanso_seg} onChange={set('descanso_seg')} onBlur={() => salvar()} /></label>
+        <div className="bloco-acoes">
+          {!comObs && <button type="button" className="mini mais-obs" onClick={() => setComObs(true)}>+ Instrução</button>}
+          <button className="mini icone" disabled={i === 0} onClick={() => onMove(i, -1)} aria-label={`Subir ${nomeCat}`} title="Subir"><Icone nome="cima" tam={16} /></button>
+          <button className="mini icone" disabled={i === total - 1} onClick={() => onMove(i, 1)} aria-label={`Descer ${nomeCat}`} title="Descer"><Icone nome="baixo" tam={16} /></button>
+          <button className="mini icone perigo" disabled={total <= 1} onClick={() => onRemove(b)} aria-label={`Remover ${nomeCat}`} title="Remover"><Icone nome="x" tam={16} /></button>
         </div>
       </div>
-      <div className="grid4">
-        <label>Séries<input type="number" min="1" value={v.series} onChange={set('series')} onBlur={() => salvar()} /></label>
-        <label>Reps<input value={v.repeticoes} onChange={set('repeticoes')} onBlur={() => salvar()} /></label>
-        <label>Carga<input placeholder="opcional" value={v.carga} onChange={set('carga')} onBlur={() => salvar()} /></label>
-        <label>Desc. (s)<input type="number" min="0" value={v.descanso_seg} onChange={set('descanso_seg')} onBlur={() => salvar()} /></label>
-      </div>
-      <input placeholder="Instruções desta série (opcional)" value={v.observacao} onChange={set('observacao')} onBlur={() => salvar()} />
+      {comObs && <input className="bloco-obs" placeholder="Instruções desta série (opcional)" aria-label={`Instruções da série ${nomeCat}`} value={v.observacao} onChange={set('observacao')} onBlur={() => salvar()} autoFocus={!b.observacao} />}
     </div>
   )
 }
@@ -120,6 +127,7 @@ function Item({ it, i, total, rotulo, cats, onMove, onRemove, onDuplicar, onChan
   const salvo = useSalvamento()
   const { confirmar } = useDialogo()
   const nome = it.exercicios?.nome || 'exercício'
+  const [comObs, setComObs] = useState(!!it.observacao)
 
   // Os campos salvam ao sair, como antes; o indicador ao lado do nome mostra o resultado.
   const erroDe = ({ error }) => (error ? mensagemErro(error) : '')
@@ -197,10 +205,13 @@ function Item({ it, i, total, rotulo, cats, onMove, onRemove, onDuplicar, onChan
           {blocos.map((b, j) => (
             <Bloco key={b.id} b={b} i={j} total={blocos.length} cats={cats} onMove={moverBloco} onRemove={removerBloco} onErro={onErro} onGerenciar={onGerenciar} onSalvar={campos => salvarBloco(b, campos)} />
           ))}
-          <button className="btn sec" style={{ marginTop: 6 }} onClick={addBloco}>+ Tipo de série</button>
         </>
       )}
-      <input placeholder="Observação geral do exercício (opcional)" value={obs} onChange={e => setObs(e.target.value)} onBlur={salvarObs} />
+      {comObs && <input className="item-obs" placeholder="Observação geral do exercício (opcional)" aria-label={`Observação geral de ${nome}`} value={obs} onChange={e => setObs(e.target.value)} onBlur={salvarObs} autoFocus={!it.observacao} />}
+      <div className="item-rodape">
+        {!legado && <button type="button" className="mini" onClick={addBloco}><Icone nome="mais" tam={14} /> Tipo de série</button>}
+        {!comObs && <button type="button" className="mini" onClick={() => setComObs(true)}><Icone nome="mais" tam={14} /> Observação do exercício</button>}
+      </div>
     </div>
   )
 }
@@ -372,7 +383,7 @@ function TreinoCard({ treino, letra, proximaOrdem, biblioteca, cats, catsTreino,
         </div>
       )}
 
-      <div className="dias" aria-label="Dias da semana deste treino">
+      <div className="dias" role="group" aria-label="Dias da semana deste treino">
         {DIAS.map(([l, d, nome]) => (
           <button key={d} type="button" title={nome} aria-label={nome} aria-pressed={dias.includes(d)}
             className={'dia' + (dias.includes(d) ? ' on' : '')} onClick={() => toggleDia(d)}>{l}</button>
@@ -451,7 +462,7 @@ const letraDoTreino = (t, idx) => {
   return m ? m[1].toUpperCase() : String.fromCharCode(65 + (idx % 26))
 }
 
-export default function Editor({ ficha, onVoltar }) {
+export default function Editor({ ficha, onVoltar, trilha }) {
   const [treinos, setTreinos] = useState([])
   const [biblioteca, setBiblioteca] = useState([])
   const [cats, setCats] = useState([])
@@ -497,8 +508,8 @@ export default function Editor({ ficha, onVoltar }) {
 
   return (
     <>
-      <Voltar onClick={onVoltar} rotulo="Fichas" />
-      <h3>{ficha.nome}</h3>
+      {trilha ? <CabecalhoPagina trilha={trilha} titulo={ficha.nome} subtitulo={`${treinos.length} ${treinos.length === 1 ? 'treino' : 'treinos'}${ficha.objetivo ? ` · ${ficha.objetivo}` : ''}`} />
+        : <><Voltar onClick={onVoltar} rotulo="Fichas" /><h3>{ficha.nome}</h3></>}
       {legado && <p className="erro">Para usar tipos de série (aquecimento, backoff, dropset e outros), rode a migração da Etapa 7.1 no Supabase.</p>}
       {msg && <p className="erro">{msg}</p>}
       {treinos.length > 1 && (
@@ -513,7 +524,7 @@ export default function Editor({ ficha, onVoltar }) {
       {treinos.map((t, idx) => (
         <TreinoCard key={t.id} treino={t} letra={letraDoTreino(t, idx)} proximaOrdem={treinos.reduce((m, x) => Math.max(m, (x.ordem ?? 0) + 1), 0)} biblioteca={biblioteca} cats={legado ? [] : cats} catsTreino={catsTreino} onChange={carregar} onGerenciar={() => setGerenciar(true)} />
       ))}
-      <button className="btn" onClick={novoTreino}>+ Novo treino</button>
+      <button className="btn sec" onClick={novoTreino}><Icone nome="mais" tam={18} />Novo treino</button>
     </>
   )
 }

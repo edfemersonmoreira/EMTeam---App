@@ -12,7 +12,7 @@
 .pick > div:hover { background: var(--card); }
 .wrap { flex-wrap: wrap; }
 select { appearance: auto; }
-.dias { display: flex; gap: 6px; margin: 12px 0 4px; }
-.dia { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--borda); background: var(--bg2); color: var(--txt2); font-size: var(--t-sm); font-weight: 800; cursor: pointer; transition: all .16s ease; }
+.dias { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 4px; }
+.dia { min-width: 48px; height: 34px; padding: 0 10px; border-radius: var(--r-pill); border: 1px solid var(--borda); background: var(--bg2); color: var(--txt2); font-size: var(--t-sm); font-weight: 800; cursor: pointer; transition: all .16s ease; }
 .dia:hover { border-color: var(--borda2); color: var(--txt); }
 .dia.on { background: var(--verde); border-color: var(--verde); color: var(--sobre-verde); }

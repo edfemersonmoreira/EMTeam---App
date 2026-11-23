@@ -3,12 +3,13 @@ import { supabase } from './supabase'
 import { mensagemErro } from './erros'
 import Icone from './Icone'
 import Voltar from './Voltar'
+import { CabecalhoPagina } from './Cabecalho'
 import Etiqueta from './Etiqueta'
 import { useDialogo } from './Dialogo'
 
 export const PALETA = ['#20B2AA', '#008080', '#E0A93B', '#6FA8F5', '#A98BF0', '#E5635F', '#F0914B', '#4FC3E8', '#C8B08A', '#9BAAAA']
 
-export default function Categorias({ onVoltar }) {
+export default function Categorias({ onVoltar, trilha }) {
   const [lista, setLista] = useState([])
   const [msg, setMsg] = useState('')
   const [novo, setNovo] = useState({ nome: '', cor: PALETA[3] })
@@ -56,9 +57,10 @@ export default function Categorias({ onVoltar }) {
 
   return (
     <>
-      <Voltar onClick={onVoltar} />
-      <h3>Tipos de série e técnicas</h3>
-      <p className="muted">Cadastre as categorias que você usa na prescrição. Só a categoria Principal alimenta o histórico de cargas e os gráficos. As demais ficam registradas separadamente.</p>
+      {trilha
+        ? <CabecalhoPagina trilha={trilha} titulo="Tipos de série e técnicas" subtitulo="Cadastre as categorias que você usa na prescrição. Só a categoria Principal alimenta o histórico de cargas e os gráficos." />
+        : <><Voltar onClick={onVoltar} /><h3>Tipos de série e técnicas</h3>
+          <p className="muted">Cadastre as categorias que você usa na prescrição. Só a categoria Principal alimenta o histórico de cargas e os gráficos. As demais ficam registradas separadamente.</p></>}
       {msg && <p className="erro">{msg}</p>}
 
       {lista.map((c, i) => (

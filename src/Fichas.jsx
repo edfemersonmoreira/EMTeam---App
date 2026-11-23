@@ -5,6 +5,7 @@ import { mensagemErro } from './erros'
 import Editor from './Editor'
 import Menu from './Menu'
 import Voltar from './Voltar'
+import { CabecalhoPagina } from './Cabecalho'
 import Etiqueta from './Etiqueta'
 import { VALIDADE_PADRAO_SEMANAS, dataValidade, vencimentoDaFicha, diasParaVencer, fmtData } from './painelUtil'
 
@@ -12,7 +13,7 @@ import { VALIDADE_PADRAO_SEMANAS, dataValidade, vencimentoDaFicha, diasParaVence
 const faltaColuna = e => e && (e.code === '42703' || e.code === 'PGRST204' || /validade_em/i.test(e.message || ''))
 const vencTxt = semanas => fmtData(new Date(dataValidade(semanas) + 'T00:00:00'))
 
-export default function Fichas({ aluna, onVoltar }) {
+export default function Fichas({ aluna, onVoltar, trilha }) {
   const [fichas, setFichas] = useState([])
   const [alunas, setAlunas] = useState([])
   const [editar, setEditar] = useState(null)
@@ -90,15 +91,26 @@ export default function Fichas({ aluna, onVoltar }) {
     setDup(null); setMsg(''); carregar()
   }
 
-  if (editar) return <Editor ficha={editar} onVoltar={() => { setEditar(null); carregar() }} />
+  // Trilha: Alunas › Ana Souza › Treinos (› nome da ficha, dentro do editor)
+  const fecharTudo = () => { setEditar(null); setNovo(null); setDup(null); setMsg(''); carregar() }
+  const base = trilha ? [...trilha, { rotulo: aluna.nome }] : null
+  const trilhaTreinos = base && [...base, { rotulo: 'Treinos', onClick: fecharTudo }]
+
+  if (editar) return <Editor ficha={editar} trilha={trilhaTreinos && [...trilhaTreinos, { rotulo: editar.nome }]} onVoltar={() => { setEditar(null); carregar() }} />
 
   if (novo) return (
-    <form onSubmit={criar} className="card">
-      <h3>Nova ficha de {aluna.nome}</h3>
-      <input placeholder="Nome da ficha (ex.: Hipertrofia - Ciclo 1)" value={novo.nome} onChange={e => setNovo({ ...novo, nome: e.target.value })} required />
-      <input placeholder="Objetivo (opcional)" value={novo.objetivo} onChange={e => setNovo({ ...novo, objetivo: e.target.value })} />
-      <label className="muted bl">Validade da ficha (semanas)</label>
-      <input type="number" min="1" max="104" inputMode="numeric" value={novo.semanas} onChange={e => setNovo({ ...novo, semanas: e.target.value })} required />
+    <>
+    {trilhaTreinos ? <CabecalhoPagina trilha={[...trilhaTreinos, { rotulo: 'Nova ficha' }]} titulo={`Nova ficha de ${aluna.nome}`} /> : <h3>Nova ficha de {aluna.nome}</h3>}
+    <form onSubmit={criar} className="card form-estreito">
+      <label className="campo-rotulo">Nome da ficha
+        <input placeholder="Por exemplo, Hipertrofia, ciclo 1" value={novo.nome} onChange={e => setNovo({ ...novo, nome: e.target.value })} required />
+      </label>
+      <label className="campo-rotulo">Objetivo (opcional)
+        <input value={novo.objetivo} onChange={e => setNovo({ ...novo, objetivo: e.target.value })} />
+      </label>
+      <label className="campo-rotulo">Validade da ficha (semanas)
+        <input type="number" min="1" max="104" inputMode="numeric" value={novo.semanas} onChange={e => setNovo({ ...novo, semanas: e.target.value })} required />
+      </label>
       <div className="muted">Vence em {vencTxt(novo.semanas)}.</div>
       {msg && <p className="erro">{msg}</p>}
       <div className="row">
@@ -106,18 +118,24 @@ export default function Fichas({ aluna, onVoltar }) {
         <button type="button" className="btn sec" onClick={() => setNovo(null)}>Cancelar</button>
       </div>
     </form>
+    </>
   )
 
   if (dup) return (
-    <form onSubmit={duplicar} className="card">
-      <h3>Duplicar "{dup.nome}"</h3>
-      <label className="muted">Copiar para:</label>
-      <select value={destino} onChange={e => setDestino(e.target.value)}>
-        {alunas.map(a => <option key={a.id} value={a.id}>{a.id === aluna.id ? `${a.nome} (mesma aluna)` : a.nome}</option>)}
-      </select>
-      <input placeholder="Nome da cópia (opcional)" value={dup.novoNome || ''} onChange={e => setDup({ ...dup, novoNome: e.target.value })} />
-      <label className="muted bl">Validade da cópia (semanas)</label>
-      <input type="number" min="1" max="104" inputMode="numeric" value={dup.semanas} onChange={e => setDup({ ...dup, semanas: e.target.value })} required />
+    <>
+    {trilhaTreinos ? <CabecalhoPagina trilha={[...trilhaTreinos, { rotulo: 'Duplicar' }]} titulo={`Duplicar ${dup.nome}`} /> : <h3>Duplicar "{dup.nome}"</h3>}
+    <form onSubmit={duplicar} className="card form-estreito">
+      <label className="campo-rotulo">Copiar para
+        <select value={destino} onChange={e => setDestino(e.target.value)}>
+          {alunas.map(a => <option key={a.id} value={a.id}>{a.id === aluna.id ? `${a.nome} (mesma aluna)` : a.nome}</option>)}
+        </select>
+      </label>
+      <label className="campo-rotulo">Nome da cópia (opcional)
+        <input value={dup.novoNome || ''} onChange={e => setDup({ ...dup, novoNome: e.target.value })} />
+      </label>
+      <label className="campo-rotulo">Validade da cópia (semanas)
+        <input type="number" min="1" max="104" inputMode="numeric" value={dup.semanas} onChange={e => setDup({ ...dup, semanas: e.target.value })} required />
+      </label>
       <div className="muted">Vence em {vencTxt(dup.semanas)}.</div>
       {msg && <p className="erro">{msg}</p>}
       <div className="row">
@@ -125,15 +143,17 @@ export default function Fichas({ aluna, onVoltar }) {
         <button type="button" className="btn sec" onClick={() => setDup(null)}>Cancelar</button>
       </div>
     </form>
+    </>
   )
 
   return (
     <>
-      <Voltar onClick={onVoltar} rotulo="Alunas" />
-      <div className="topo">
-        <h3 style={{ margin: 0 }}>Fichas de {aluna.nome}</h3>
-        <button className="btn sm" onClick={() => setNovo({ nome: '', objetivo: '', semanas: VALIDADE_PADRAO_SEMANAS })}><Icone nome="mais" tam={18} />Nova ficha</button>
-      </div>
+      {(() => {
+        const nova = <button className="btn sm" onClick={() => setNovo({ nome: '', objetivo: '', semanas: VALIDADE_PADRAO_SEMANAS })}><Icone nome="mais" tam={18} />Nova ficha</button>
+        return base
+          ? <CabecalhoPagina trilha={[...base, { rotulo: 'Treinos' }]} titulo={`Treinos de ${aluna.nome}`} subtitulo="Fichas de treino. Só uma fica ativa por vez." acoes={nova} />
+          : <><Voltar onClick={onVoltar} rotulo="Alunas" /><div className="topo"><h3 style={{ margin: 0 }}>Fichas de {aluna.nome}</h3>{nova}</div></>
+      })()}
       {msg && <p className="erro">{msg}</p>}
       {ok && <p className="ok">{ok}</p>}
       {fichas.length === 0 && <p className="muted">Nenhuma ficha ainda.</p>}

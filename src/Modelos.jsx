@@ -4,6 +4,7 @@ import { mensagemErro } from './erros'
 import Icone from './Icone'
 import Menu from './Menu'
 import Voltar from './Voltar'
+import { CabecalhoPagina } from './Cabecalho'
 import { useDialogo } from './Dialogo'
 import { useSalvamento, StatusSalvo } from './Salvamento'
 import Categorias from './Categorias'
@@ -49,6 +50,7 @@ function ItemModelo({ it, i, total, cats, onMove, onRemove, onErro, onGerenciar 
   const salvo = useSalvamento()
   const { confirmar } = useDialogo()
   const nome = it.exercicios ? it.exercicios.nome : 'exercício'
+  const [comObs, setComObs] = useState(!!it.observacao)
 
   async function persistir(novos) {
     setBlocos(novos)
@@ -97,8 +99,11 @@ function ItemModelo({ it, i, total, cats, onMove, onRemove, onErro, onGerenciar 
         <Bloco key={b._k} b={b} i={j} total={blocos.length} cats={cats} onMove={moverBloco} onRemove={removerBloco}
           onErro={onErro} onGerenciar={onGerenciar} onSalvar={campos => salvarBloco(b._k, campos)} />
       ))}
-      <button className="btn sec" style={{ marginTop: 6 }} onClick={addBloco}>+ Tipo de série</button>
-      <input placeholder="Observação geral do exercício (opcional)" value={obs} onChange={e => setObs(e.target.value)} onBlur={salvarObs} />
+      {comObs && <input className="item-obs" placeholder="Observação geral do exercício (opcional)" aria-label={`Observação geral de ${nome}`} value={obs} onChange={e => setObs(e.target.value)} onBlur={salvarObs} autoFocus={!it.observacao} />}
+      <div className="item-rodape">
+        <button type="button" className="mini" onClick={addBloco}><Icone nome="mais" tam={14} /> Tipo de série</button>
+        {!comObs && <button type="button" className="mini" onClick={() => setComObs(true)}><Icone nome="mais" tam={14} /> Observação do exercício</button>}
+      </div>
     </div>
   )
 }
@@ -167,23 +172,29 @@ function EditorModelo({ id, onVoltar }) {
   }
 
   if (gerenciar) return <Categorias onVoltar={() => setGerenciar(false)} />
-  if (!modelo || !pronto) return <><Voltar onClick={onVoltar} rotulo="Modelos" /><p className="muted">{msg || 'Carregando…'}</p></>
+  const trilhaModelo = [{ rotulo: 'Modelos de treino', onClick: onVoltar }]
+  if (!modelo || !pronto) return <><CabecalhoPagina trilha={[...trilhaModelo, { rotulo: 'Carregando…' }]} titulo="Modelo de treino" /><p className="muted">{msg || 'Carregando…'}</p></>
   const filtrados = biblioteca.filter(x => `${x.nome} ${x.grupo_muscular || ''}`.toLowerCase().includes(busca.toLowerCase())).slice(0, 30)
 
   return (
     <>
-      <Voltar onClick={onVoltar} rotulo="Modelos" />
-      <div className="topo"><h3>Modelo de treino</h3><StatusSalvo s={salvo} /></div>
-      <input placeholder="Nome do modelo" value={campos.nome} onChange={e => setCampos({ ...campos, nome: e.target.value })} onBlur={() => salvarCampos()} />
-      <div className="row wrap" style={{ alignItems: 'center' }}>
-        <input list="categorias-modelo" placeholder="Categoria do modelo (opcional)" value={campos.categoria} style={{ flex: 1, minWidth: 160 }} disabled={!migrado}
-          onChange={e => setCampos({ ...campos, categoria: e.target.value })} onBlur={() => salvarCampos()} />
+      <CabecalhoPagina trilha={[...trilhaModelo, { rotulo: modelo.nome }]} titulo={campos.nome || 'Modelo de treino'} subtitulo="As alterações salvam sozinhas ao sair de cada campo." acoes={<StatusSalvo s={salvo} />} />
+      <div className="campos-modelo">
+        <label className="campo-rotulo">Nome do modelo
+          <input value={campos.nome} onChange={e => setCampos({ ...campos, nome: e.target.value })} onBlur={() => salvarCampos()} />
+        </label>
+        <label className="campo-rotulo">Categoria (opcional)
+          <input list="categorias-modelo" placeholder="Por exemplo, Hipertrofia" value={campos.categoria} disabled={!migrado}
+            onChange={e => setCampos({ ...campos, categoria: e.target.value })} onBlur={() => salvarCampos()} />
+        </label>
         <datalist id="categorias-modelo">{sugestoes.map(s => <option key={s} value={s} />)}</datalist>
         {migrado && catsTreino.length > 0 && (
-          <select value={campos.categoria_treino_id} onChange={e => salvarCampos({ categoria_treino_id: e.target.value })} aria-label="Tipo de treino" style={{ width: 'auto', minWidth: 150 }}>
+          <label className="campo-rotulo">Tipo de treino
+          <select value={campos.categoria_treino_id} onChange={e => salvarCampos({ categoria_treino_id: e.target.value })}>
             <option value="">Superiores ou inferiores</option>
             {catsTreino.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
           </select>
+          </label>
         )}
       </div>
       {!migrado && <p className="muted">Categorias do modelo e tipo de treino ficam disponíveis depois da migração da Etapa 8 no Supabase.</p>}
@@ -272,8 +283,8 @@ function InserirModelo({ modelo, cats, onFechar }) {
 
   return (
     <>
-      <Voltar onClick={onFechar} rotulo="Modelos" />
-      <h3>Inserir "{modelo.nome}" em uma ficha</h3>
+      <CabecalhoPagina trilha={[{ rotulo: 'Modelos de treino', onClick: onFechar }, { rotulo: modelo.nome }, { rotulo: 'Inserir em ficha' }]} titulo={`Inserir ${modelo.nome} em uma ficha`} subtitulo="A ficha recebe uma cópia independente: alterar o modelo depois não muda o treino da aluna." />
+      <div className="duas-colunas">
       <div className="card">
         <strong>O que será copiado</strong>
         {itens.map((it, i) => (
@@ -310,6 +321,7 @@ function InserirModelo({ modelo, cats, onFechar }) {
         <button className="btn" style={{ width: '100%', marginTop: 10 }} disabled={!fichaId || !itens.length || salvando} onClick={inserir}>
           {salvando ? 'Inserindo…' : 'Inserir na ficha'}
         </button>
+      </div>
       </div>
     </>
   )
@@ -380,18 +392,23 @@ function Biblioteca({ cats, onEditar, onInserir }) {
 
   return (
     <>
-      <div className="row" style={{ marginTop: 0 }}>
-        <input style={{ margin: 0 }} placeholder="Buscar modelo" value={busca} onChange={e => setBusca(e.target.value)} />
-        <button className="btn" style={{ flex: 'none' }} onClick={novo}><Icone nome="mais" tam={18} />Novo</button>
+      <CabecalhoPagina titulo="Modelos de treino" subtitulo="Estruturas reutilizáveis. Ao inserir em uma ficha, a aluna recebe uma cópia independente do modelo."
+        acoes={<button className="btn sm" onClick={novo}><Icone nome="mais" tam={18} />Novo modelo</button>} />
+      <div className="ferramentas">
+        <label className="busca">
+          <Icone nome="busca" tam={18} />
+          <input type="search" placeholder="Buscar modelo" aria-label="Buscar modelo" value={busca} onChange={e => setBusca(e.target.value)} />
+        </label>
+        {categorias.length > 0 && (
+          <div className="faixa-chips" role="group" aria-label="Filtrar por categoria">
+            <button className={'chip' + (filtro === '' ? ' on' : '')} aria-pressed={filtro === ''} onClick={() => setFiltro('')}>Todos</button>
+            {categorias.map(c => <button key={c} className={'chip' + (filtro === c ? ' on' : '')} aria-pressed={filtro === c} onClick={() => setFiltro(filtro === c ? '' : c)}>{c}</button>)}
+          </div>
+        )}
       </div>
-      {categorias.length > 0 && (
-        <div className="faixa-chips">
-          <button className={'chip' + (filtro === '' ? ' on' : '')} onClick={() => setFiltro('')}>Todos</button>
-          {categorias.map(c => <button key={c} className={'chip' + (filtro === c ? ' on' : '')} onClick={() => setFiltro(filtro === c ? '' : c)}>{c}</button>)}
-        </div>
-      )}
       {msg && <p className="erro">{msg}</p>}
-      {filtrados.length === 0 && !msg && <p className="muted">{lista.length ? 'Nenhum modelo encontrado.' : 'Nenhum modelo ainda. Toque em Novo, ou use "Salvar como modelo" dentro de um treino.'}</p>}
+      {filtrados.length === 0 && !msg && <p className="lista-vazia">{lista.length ? 'Nenhum modelo encontrado.' : 'Nenhum modelo ainda. Use "Novo modelo", ou "Salvar como modelo" dentro de um treino.'}</p>}
+      <div className="grade-cartoes">
       {filtrados.map(m => {
         const n = m.modelo_itens.length
         return (
@@ -427,6 +444,7 @@ function Biblioteca({ cats, onEditar, onInserir }) {
           </div>
         )
       })}
+      </div>
     </>
   )
 }
@@ -440,8 +458,6 @@ export default function Modelos() {
   if (inserindo) return <InserirModelo modelo={inserindo} cats={cats} onFechar={() => setInserindo(null)} />
   return (
     <>
-      <h3>Modelos de treino</h3>
-      <p className="muted">Estruturas reutilizáveis. Ao inserir em uma ficha, a aluna recebe uma cópia independente do modelo.</p>
       <Biblioteca cats={cats} onEditar={setEditando} onInserir={setInserindo} />
     </>
   )

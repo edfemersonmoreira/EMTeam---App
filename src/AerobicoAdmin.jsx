@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import { mensagemErro } from './erros'
 import Icone from './Icone'
 import Voltar from './Voltar'
+import { CabecalhoPagina } from './Cabecalho'
 import Etiqueta from './Etiqueta'
 import { useDialogo } from './Dialogo'
 import { useSalvamento, StatusSalvo } from './Salvamento'
@@ -72,7 +73,7 @@ function Prescricao({ p, onMudou, onErro }) {
   )
 }
 
-export default function AerobicoAdmin({ aluna, onVoltar }) {
+export default function AerobicoAdmin({ aluna, onVoltar, trilha }) {
   const [presc, setPresc] = useState([])
   const [regs, setRegs] = useState([])
   const [msg, setMsg] = useState('')
@@ -95,12 +96,13 @@ export default function AerobicoAdmin({ aluna, onVoltar }) {
 
   return (
     <>
-      <Voltar onClick={onVoltar} rotulo="Alunas" />
-      <h3>Aeróbico de {aluna.nome}</h3>
+      {trilha
+        ? <CabecalhoPagina trilha={[...trilha, { rotulo: aluna.nome }, { rotulo: 'Aeróbico' }]} titulo={`Aeróbico de ${aluna.nome}`} subtitulo="Prescrição e atividades registradas pela aluna, separadas da musculação." acoes={<button className="btn sm" onClick={nova}><Icone nome="mais" tam={18} />Nova prescrição</button>} />
+        : <><Voltar onClick={onVoltar} rotulo="Alunas" /><h3>Aeróbico de {aluna.nome}</h3></>}
       {msg && <p className="erro">{msg}</p>}
 
       <datalist id="modalidades-aero">{MODALIDADES.map(m => <option key={m} value={m} />)}</datalist>
-      <div className="topo"><strong>Prescrição</strong><button className="btn sm" onClick={nova}><Icone nome="mais" tam={18} />Nova prescrição</button></div>
+      <div className="topo"><h3 style={{ margin: 0 }}>Prescrição</h3>{!trilha && <button className="btn sm" onClick={nova}><Icone nome="mais" tam={18} />Nova prescrição</button>}</div>
       {presc.length === 0 && !msg && <p className="muted">Nenhum aeróbico prescrito para esta aluna ainda.</p>}
       {presc.map(p => <Prescricao key={p.id} p={p} onMudou={carregar} onErro={setMsg} />)}
 

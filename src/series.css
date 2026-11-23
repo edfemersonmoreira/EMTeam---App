@@ -9,9 +9,23 @@
 }
 
 /* Editor de fichas */
-.bloco-ed { border: 1px solid var(--borda); border-left: 4px solid var(--cat, var(--verde2)); border-radius: var(--r-ctl); padding: 10px 12px; margin: 8px 0; background: var(--bg2); }
-.cat-sel { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
-.cat-sel select { margin: 0; }
+.bloco-ed { border: 1px solid var(--borda); border-left: 4px solid var(--cat, var(--verde2)); border-radius: var(--r-ctl); padding: 8px 10px; margin: 6px 0; background: var(--bg2); }
+/* Tipo de série em uma linha: no celular, o tipo e as ações ficam em cima e os quatro campos em duas colunas;
+   no computador (1100 px ou mais, já com a barra lateral), tudo numa linha só, com as colunas alinhadas entre os exercícios. */
+.bloco-linha { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--e-2); }
+.bloco-linha .rot { display: block; margin-bottom: 2px; font-size: var(--t-xs); font-weight: 600; color: var(--txt2); }
+.bloco-linha input, .bloco-linha select { margin: 0; min-height: 40px; padding: 8px 10px; }
+.cat-sel { order: 0; flex: 1 1 55%; min-width: 0; }
+.cat-sel-campo { display: flex; align-items: center; gap: var(--e-2); }
+.campo-bloco { order: 2; flex: 1 1 calc(50% - var(--e-1)); min-width: 0; }
+.bloco-acoes { order: 1; display: flex; align-items: center; gap: 6px; margin-left: auto; padding-bottom: 2px; }
+.mini.mais-obs { font-size: var(--t-xs); font-weight: 700; color: var(--txt2); white-space: nowrap; }
+.bloco-obs { margin: var(--e-2) 0 0; min-height: 40px; padding: 8px 10px; }
+@media (min-width: 1100px) {
+  .bloco-linha { display: grid; grid-template-columns: minmax(170px, 1.6fr) repeat(4, minmax(76px, .7fr)) auto; }
+  .cat-sel, .campo-bloco, .bloco-acoes { order: 0; }   /* a ordem do celular não vale na grade */
+  .bloco-acoes { margin-left: 0; }
+}
 .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 6px; }
 .grid4 label { font-size: var(--t-xs); color: var(--txt2); font-weight: 600; }
 @media (max-width: 520px) { .grid4 { grid-template-columns: 1fr 1fr; } }

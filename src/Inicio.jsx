@@ -15,7 +15,7 @@ const iniciais = n => (n || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).
 const LIMITE = 6
 
 // Antes de a coluna validade_em existir no banco, a consulta cai para o formato antigo (as fichas usam o prazo padrão de 5 semanas).
-async function buscarFichasAtivas() {
+export async function buscarFichasAtivas() {
   const r = await supabase.from('fichas').select('id, aluna_id, nome, criado_em, validade_em').eq('ativa', true)
   if (!r.error) return r
   return supabase.from('fichas').select('id, aluna_id, nome, criado_em').eq('ativa', true)
@@ -124,34 +124,6 @@ export default function Inicio({ perfil, irPara, abrirAluna }) {
       </div>
 
       <div className="painel-colunas">
-        <section className="bloco painel-notif" aria-labelledby="t-concl">
-          <div className="painel-cab">
-            <h3 id="t-concl"><Icone nome="sino" tam={18} /> Treinos concluídos</h3>
-            {novas > 0 && <button className="painel-link" onClick={() => marcar(null)}>Marcar como vistas</button>}
-          </div>
-          <div className="data">Últimos {JANELA_CONCLUIDOS_DIAS} dias{novas > 0 ? ` · ${plural(novas, 'nova', 'novas')}` : ''}</div>
-          {!dados && <p className="painel-vazio">Carregando…</p>}
-          {dados && !dados.concluidosOk && <p className="painel-vazio">Não foi possível carregar as notificações.</p>}
-          {dados && dados.concluidosOk && dados.concluidos.length === 0 && <p className="painel-vazio">Nenhum treino concluído nos últimos {JANELA_CONCLUIDOS_DIAS} dias.</p>}
-          {lista.map(i => {
-            const novo = ehNovo(i, vistos)
-            return (
-              <button key={i.chave} className={'notif' + (novo ? ' nova' : '')} onClick={() => abrir(i)}>
-                <Foto nome={i.nome} url={i.avatar} />
-                <span className="notif-txt">
-                  <span className="notif-t"><strong>{primeiroNome(i.nome)}</strong>{' '}
-                    {i.tipo === 'aerobico' ? 'concluiu o aeróbico' : i.n > 1 ? `concluiu ${i.n} treinos` : 'concluiu o treino'}</span>
-                  <span className="notif-d">{i.detalhes.join(' · ')}</span>
-                </span>
-                <span className="notif-q">{novo && <em className="pilula">Novo</em>}{rotuloQuando(i.quando)}</span>
-              </button>
-            )
-          })}
-          {dados && dados.concluidos.length > LIMITE && (
-            <button className="painel-link mais" onClick={() => setTodas(!todas)}>{todas ? 'Mostrar menos' : `Mostrar todas (${dados.concluidos.length})`}</button>
-          )}
-        </section>
-
         <section className="painel-card" aria-labelledby="t-fichas">
           <div className="painel-cab">
             <h3 id="t-fichas"><Icone nome="modelos" tam={18} /> Fichas e pendências</h3>
@@ -181,8 +153,36 @@ export default function Inicio({ perfil, irPara, abrirAluna }) {
           ))}
           {dados && dados.lembretesOk && dados.semValidade > 0 && (
             <p className="muted pequeno painel-nota">
-              {plural(dados.semValidade, 'ficha ativa está sem validade definida e não gera lembrete', 'fichas ativas estão sem validade definida e não geram lembrete')}. Defina em Alunas › Treinos › Validade.
+              {plural(dados.semValidade, 'ficha ativa está sem validade definida e não gera lembrete', 'fichas ativas estão sem validade definida e não geram lembrete')}. Defina em Alunas › Treinos › Alterar validade.
             </p>
+          )}
+        </section>
+
+        <section className="bloco painel-notif" aria-labelledby="t-concl">
+          <div className="painel-cab">
+            <h3 id="t-concl"><Icone nome="sino" tam={18} /> Treinos concluídos</h3>
+            {novas > 0 && <button className="painel-link" onClick={() => marcar(null)}>Marcar como vistas</button>}
+          </div>
+          <div className="data">Últimos {JANELA_CONCLUIDOS_DIAS} dias{novas > 0 ? ` · ${plural(novas, 'nova', 'novas')}` : ''}</div>
+          {!dados && <p className="painel-vazio">Carregando…</p>}
+          {dados && !dados.concluidosOk && <p className="painel-vazio">Não foi possível carregar as notificações.</p>}
+          {dados && dados.concluidosOk && dados.concluidos.length === 0 && <p className="painel-vazio">Nenhum treino concluído nos últimos {JANELA_CONCLUIDOS_DIAS} dias.</p>}
+          {lista.map(i => {
+            const novo = ehNovo(i, vistos)
+            return (
+              <button key={i.chave} className={'notif' + (novo ? ' nova' : '')} onClick={() => abrir(i)}>
+                <Foto nome={i.nome} url={i.avatar} />
+                <span className="notif-txt">
+                  <span className="notif-t"><strong>{primeiroNome(i.nome)}</strong>{' '}
+                    {i.tipo === 'aerobico' ? 'concluiu o aeróbico' : i.n > 1 ? `concluiu ${i.n} treinos` : 'concluiu o treino'}</span>
+                  <span className="notif-d">{i.detalhes.join(' · ')}</span>
+                </span>
+                <span className="notif-q">{novo && <em className="pilula">Novo</em>}{rotuloQuando(i.quando)}</span>
+              </button>
+            )
+          })}
+          {dados && dados.concluidos.length > LIMITE && (
+            <button className="painel-link mais" onClick={() => setTodas(!todas)}>{todas ? 'Mostrar menos' : `Mostrar todas (${dados.concluidos.length})`}</button>
           )}
         </section>
       </div>

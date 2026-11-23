@@ -1,10 +1,6 @@
 /* Área "Alunas": um card por aluna, na mesma linguagem do painel inicial.
    Computador: identificação à esquerda e as cinco ações à direita, na mesma linha. Telas menores: ações abaixo, em grade. */
-main.wide:has(.alunas-lista) { max-width: 1180px; }
-.alunas-lista { display: flex; flex-direction: column; gap: 10px; }
-.alunas-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
-.alunas-topo h2 { margin: 0 0 2px; font-size: var(--t-2xl); font-weight: 800; }
-.alunas-topo .muted { font-size: var(--t-md); }
+.alunas-lista { display: flex; flex-direction: column; gap: 8px; }
 
 .aluna-card {
   display: flex; flex-direction: column; gap: 14px; padding: 16px; background: var(--card);
@@ -20,7 +16,9 @@ main.wide:has(.alunas-lista) { max-width: 1180px; }
 .aluna-nome { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .aluna-nome strong { font-size: var(--t-lg); font-weight: 800; }
 
-.aluna-acoes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.aluna-acoes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; align-items: center; gap: 8px; }
+.aluna-acoes .menu .mini.icone { width: 44px; min-height: 44px; }
+.aluna-situacao:empty { display: none; }
 .acao {
   display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 12px;
   background: transparent; border: 1px solid var(--borda2); border-radius: var(--r-ctl); color: var(--txt);
@@ -32,19 +30,18 @@ main.wide:has(.alunas-lista) { max-width: 1180px; }
 .acao.principal { background: var(--verde); border-color: var(--verde); color: var(--sobre-verde); }
 .acao.principal svg { color: var(--sobre-verde); }
 .acao.principal:hover { background: var(--verde-hover); border-color: var(--verde-hover); }
-.acao.desativar { color: var(--txt2); }
-.acao.desativar svg { color: var(--txt2); }
-.acao.desativar:hover { border-color: var(--erro); color: var(--erro); background: transparent; }
-.acao.desativar:hover svg { color: var(--erro); }
 
 .aluna-confirma { padding: 12px 14px; border: 1px solid var(--borda2); border-radius: var(--r-ctl); background: var(--bg2); }
 .aluna-confirma p { margin: 0 0 10px; font-size: var(--t-md); }
 
-@media (min-width: 640px) { .aluna-acoes { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
-@media (min-width: 1000px) {
-  .aluna-card { flex-direction: row; align-items: center; justify-content: space-between; gap: 24px; padding: 14px 18px; }
-  .aluna-id { flex: 1 1 320px; }
-  .aluna-acoes, .aluna-confirma { flex: 0 0 auto; }
-  .aluna-acoes { grid-template-columns: repeat(5, 112px); }
-  .aluna-confirma { max-width: 560px; }
+/* Computador (1200 px ou mais, já com a barra lateral): uma linha por aluna, em colunas alinhadas (identificação · situação da ficha · ações) */
+@media (min-width: 1200px) {
+  .aluna-card { display: grid; grid-template-columns: minmax(0, 1fr) 210px auto; align-items: center; gap: 20px; padding: 12px 16px; }
+  .aluna-situacao:empty { display: block; }
+  .aluna-acoes { grid-template-columns: repeat(3, 108px) auto; }
+  .aluna-confirma { max-width: 520px; }
+  .aluna-id .avatar { width: 48px; height: 48px; font-size: var(--t-base); }
 }
+
+/* Formulários do admin em coluna de leitura confortável */
+.form-estreito { max-width: 560px; }

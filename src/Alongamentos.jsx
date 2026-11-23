@@ -4,7 +4,7 @@ import { mensagemErro } from './erros'
 import { ytEmbed } from './Exercicios'
 import Icone from './Icone'
 import Menu from './Menu'
-import Voltar from './Voltar'
+import { CabecalhoPagina } from './Cabecalho'
 import Etiqueta from './Etiqueta'
 import { useDialogo } from './Dialogo'
 import { useSalvamento, StatusSalvo } from './Salvamento'
@@ -51,8 +51,8 @@ function Biblioteca() {
   const filtrados = lista.filter(x => x.nome.toLowerCase().includes(busca.toLowerCase()))
 
   if (form) return (
-    <form onSubmit={salvar} className="card">
-      <h3>{form.id ? 'Editar exercício' : 'Novo exercício de alongamento ou mobilidade'}</h3>
+    <form onSubmit={salvar} className="card form-estreito">
+      <h3 style={{ marginTop: 0 }}>{form.id ? 'Editar exercício' : 'Novo exercício de alongamento ou mobilidade'}</h3>
       <input placeholder="Nome" value={form.nome} onChange={set('nome')} required />
       <textarea rows="4" placeholder="Descrição e orientações" value={form.descricao || ''} onChange={set('descricao')} />
       <input placeholder="Link do vídeo no YouTube" value={form.video_url || ''} onChange={set('video_url')} />
@@ -126,7 +126,7 @@ function ItemSeq({ it, i, total, onMove, onRemove, onErro }) {
   )
 }
 
-function EditorSequencia({ id, onVoltar }) {
+function EditorSequencia({ id, onVoltar, aba }) {
   const [seq, setSeq] = useState(null)
   const [itens, setItens] = useState([])
   const [biblioteca, setBiblioteca] = useState([])
@@ -205,24 +205,26 @@ function EditorSequencia({ id, onVoltar }) {
     carregar()
   }
 
-  if (!seq) return <><Voltar onClick={onVoltar} rotulo="Alongamentos" /><p className="muted">{msg || 'Carregando…'}</p></>
+  const trilhaBase = [{ rotulo: 'Alongamentos', onClick: onVoltar }, { rotulo: (seq ? seq.modelo : aba === 'modelos') ? 'Modelos' : 'Sequências', onClick: onVoltar }]
+  if (!seq) return <><CabecalhoPagina trilha={[...trilhaBase, { rotulo: 'Carregando…' }]} titulo="Sequência" /><p className="muted">{msg || 'Carregando…'}</p></>
   const filtrados = biblioteca.filter(x => x.nome.toLowerCase().includes(busca.toLowerCase())).slice(0, 30)
 
   return (
     <>
-      <Voltar onClick={onVoltar} rotulo="Alongamentos" />
-      <div className="topo">
-        <h3>{seq.modelo ? 'Modelo de sequência' : 'Sequência'}</h3>
-        <span className="row" style={{ margin: 0 }}><StatusSalvo s={salvo} />{!seq.ativa && <Etiqueta>Desativada</Etiqueta>}</span>
-      </div>
+      <CabecalhoPagina trilha={[...trilhaBase, { rotulo: seq.nome }]} titulo={campos.nome || (seq.modelo ? 'Modelo de sequência' : 'Sequência')}
+        subtitulo={seq.modelo ? 'Modelo de sequência: não aparece para as alunas.' : 'Sequência de alongamento prescrita às alunas marcadas.'}
+        acoes={<span className="row" style={{ margin: 0 }}><StatusSalvo s={salvo} />{!seq.ativa && <Etiqueta>Desativada</Etiqueta>}</span>} />
+      <div className="campos-seq">
       <label className="campo-rotulo">Nome da sequência
         <input value={campos.nome} onChange={e => setCampos({ ...campos, nome: e.target.value })} onBlur={salvarCampos} />
       </label>
       <label className="campo-rotulo">Descrição (opcional)
         <textarea rows="2" value={campos.descricao} onChange={e => setCampos({ ...campos, descricao: e.target.value })} onBlur={salvarCampos} />
       </label>
+      </div>
       {msg && <p className="erro">{msg}</p>}
 
+      <div className={seq.modelo ? '' : 'duas-colunas'}>
       <div className="card">
         <strong>Exercícios</strong>
         {itens.map((it, i) => <ItemSeq key={it.id} it={it} i={i} total={itens.length} onMove={moverItem} onRemove={remover} onErro={setMsg} />)}
@@ -252,10 +254,11 @@ function EditorSequencia({ id, onVoltar }) {
             </label>
           ))}
           <div className="row">
-            <button className="btn sec" onClick={alternarAtiva}>{seq.ativa ? 'Desativar sequência' : 'Reativar sequência'}</button>
+            <button className="btn sec sm" onClick={alternarAtiva}>{seq.ativa ? 'Desativar sequência' : 'Reativar sequência'}</button>
           </div>
         </div>
       )}
+      </div>
     </>
   )
 }
@@ -299,13 +302,14 @@ function Listas({ modelo, onAbrir }) {
 
   return (
     <>
-      <div className="row" style={{ marginTop: 0 }}>
+      <div className="topo lista-topo">
         <span className="grow muted">{modelo ? 'Modelos para reutilizar. Eles não aparecem para as alunas.' : 'Sequências prescritas às alunas.'}</span>
-        <button className="btn" style={{ flex: 'none' }} onClick={nova}><Icone nome="mais" tam={18} />{modelo ? 'Novo modelo' : 'Nova sequência'}</button>
+        <button className="btn sm" style={{ flex: 'none' }} onClick={nova}><Icone nome="mais" tam={18} />{modelo ? 'Novo modelo' : 'Nova sequência'}</button>
       </div>
       {msg && <p className="erro">{msg}</p>}
       {ok && <p className="ok">{ok}</p>}
-      {lista.length === 0 && !msg && <p className="muted">{modelo ? 'Nenhum modelo salvo ainda.' : 'Nenhuma sequência ainda.'}</p>}
+      {lista.length === 0 && !msg && <p className="lista-vazia">{modelo ? 'Nenhum modelo salvo ainda.' : 'Nenhuma sequência ainda.'}</p>}
+      <div className="grade-cartoes">
       {lista.map(s => {
         const n = s.sequencia_alongamento_itens.length, a = s.sequencia_alongamento_alunas.length
         return (
@@ -329,6 +333,7 @@ function Listas({ modelo, onAbrir }) {
           </div>
         )
       })}
+      </div>
     </>
   )
 }
@@ -336,13 +341,13 @@ function Listas({ modelo, onAbrir }) {
 export default function Alongamentos() {
   const [aba, setAba] = useState('sequencias')
   const [aberta, setAberta] = useState(null)
-  if (aberta) return <EditorSequencia id={aberta} onVoltar={() => setAberta(null)} />
+  if (aberta) return <EditorSequencia id={aberta} aba={aba} onVoltar={() => setAberta(null)} />
   return (
     <>
-      <h3>Alongamentos e flexibilidade</h3>
-      <div className="chips">
+      <CabecalhoPagina titulo="Alongamentos e flexibilidade" subtitulo="Sequências prescritas às alunas, modelos para reutilizar e a biblioteca de exercícios de mobilidade." />
+      <div className="chips abas" role="tablist" aria-label="Seções de alongamentos">
         {[['sequencias', 'Sequências'], ['modelos', 'Modelos'], ['exercicios', 'Exercícios']].map(([k, t]) => (
-          <button key={k} className={aba === k ? 'on' : ''} onClick={() => setAba(k)}>{t}</button>
+          <button key={k} role="tab" aria-selected={aba === k} className={aba === k ? 'on' : ''} onClick={() => setAba(k)}>{t}</button>
         ))}
       </div>
       {aba === 'exercicios' ? <Biblioteca /> : <Listas key={aba} modelo={aba === 'modelos'} onAbrir={setAberta} />}

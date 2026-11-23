@@ -1,3 +1,1 @@
-/* Menu do administrador com mais abas: rolagem horizontal em telas estreitas */
-nav { overflow-x: auto; }
-nav button { flex: 1 0 auto; white-space: nowrap; }
+/* Modelos de treino: estilos próprios ficam em ui.css e nos componentes compartilhados. */

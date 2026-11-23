@@ -8,13 +8,11 @@ import Alongamentos from './Alongamentos'
 import AerobicoAdmin from './AerobicoAdmin'
 import Modelos from './Modelos'
 import Inicio from './Inicio'
-import Icone from './Icone'
 import Aluna from './Aluna'
 import Senha from './Senha'
 import Logo from './Logo'
 import TemaBotao from './TemaBotao'
-
-const NOME_AREA = { alunas: 'Alunas', exercicios: 'Exercícios', modelos: 'Modelos de treino', alongamentos: 'Alongamentos' }
+import NavAdmin from './NavAdmin'
 
 function Login({ aviso }) {
   const [email, setEmail] = useState('')
@@ -101,32 +99,35 @@ export default function App() {
     if (tipo === 'fichas') setAlunaSel(aluna); else setEvolSel(aluna)
   }
   const voltar = limpar => () => { limpar(); if (deInicio) { setAba('inicio'); setDeInicio(false) } }
+  // Trilha das páginas de uma aluna: começa em Alunas (e em Início, quando aberta por uma notificação)
+  const trilhaAluna = [
+    ...(deInicio ? [{ rotulo: 'Início', onClick: () => irPara('inicio') }] : []),
+    { rotulo: 'Alunas', onClick: () => irPara('alunas') },
+  ]
 
   let conteudo
-  if (senhaAberta) {
+  if (senhaAberta && !admin) {
     conteudo = <main><Senha onFechar={() => setSenhaAberta(false)} /></main>
   } else if (admin) {
-    conteudo = (
-      <>
-        {/* As áreas (Alunas, Exercícios, Modelos, Alongamentos) abrem pelos cards do Início. Dentro delas, a barra mostra onde a administradora está e leva de volta ao Início. */}
-        {aba !== 'inicio' && (
-          <nav className="nav-area" aria-label="Navegação do administrador">
-            <button onClick={() => irPara('inicio')}><Icone nome="voltar" tam={18} />Início</button>
-            <span className="nav-area-atual" aria-current="page">{NOME_AREA[aba]}</span>
-          </nav>
-        )}
-        {aba === 'inicio' ? <Inicio perfil={perfil} irPara={irPara} abrirAluna={abrirAluna} /> : (
+    // Área do administrador: menu fixo (barra lateral no computador, abas no celular) + conteúdo.
+    // As telas e a lógica de qual tela aparece são as mesmas de antes; só a moldura mudou.
+    const tela = senhaAberta ? <main className="wide"><Senha onFechar={() => setSenhaAberta(false)} /></main>
+      : aba === 'inicio' ? <Inicio perfil={perfil} irPara={irPara} abrirAluna={abrirAluna} /> : (
         <main className="wide">
           {aba === 'alongamentos' ? <Alongamentos />
             : aba === 'modelos' ? <Modelos />
             : aba === 'exercicios' ? <Exercicios />
-            : aeroSel ? <AerobicoAdmin aluna={aeroSel} onVoltar={() => setAeroSel(null)} />
-            : alunaSel ? <Fichas aluna={alunaSel} onVoltar={voltar(() => setAlunaSel(null))} />
-            : evolSel ? <Historico alunaId={evolSel.id} titulo={`Evolução de ${evolSel.nome}`} onVoltar={voltar(() => setEvolSel(null))} />
+            : aeroSel ? <AerobicoAdmin aluna={aeroSel} trilha={trilhaAluna} onVoltar={() => setAeroSel(null)} />
+            : alunaSel ? <Fichas aluna={alunaSel} trilha={trilhaAluna} onVoltar={voltar(() => setAlunaSel(null))} />
+            : evolSel ? <Historico alunaId={evolSel.id} titulo={`Cargas de ${evolSel.nome}`} trilha={[...trilhaAluna, { rotulo: evolSel.nome }]} onVoltar={voltar(() => setEvolSel(null))} />
             : <Alunas onFichas={setAlunaSel} onEvolucao={setEvolSel} onAerobico={setAeroSel} />}
         </main>
-        )}
-      </>
+      )
+    conteudo = (
+      <div className="admin-corpo">
+        <NavAdmin aba={senhaAberta ? null : aba} irPara={a => { setSenhaAberta(false); irPara(a) }} />
+        <div className="admin-conteudo">{tela}</div>
+      </div>
     )
   } else if (perfil.ativa === false) {
     conteudo = <main><p>Seu acesso está desativado. Fale com o seu treinador.</p></main>
@@ -135,7 +136,7 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className={'app' + (admin ? ' app-admin' : '')}>
       <header>
         <Logo />
         <span className="cab-acoes">

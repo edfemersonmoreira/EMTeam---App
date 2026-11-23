@@ -38,7 +38,6 @@ main.painel { max-width: 1180px; }
 .notif-q { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: var(--t-xs); white-space: nowrap; }
 /* Já vistas: o texto mantém o contraste (sem transparência); a diferença fica na foto mais suave, na barra e na etiqueta "Novo" das novas */
 .painel-notif .notif:not(.nova) .mini-avatar { opacity: .7; }
-.painel-notif .notif.nova { box-shadow: inset 3px 0 0 #fff; }
 .notif.nova .notif-t strong { font-weight: 800; }
 .painel-card .notif { opacity: 1; }
 .notif:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
@@ -62,15 +61,12 @@ main.painel { max-width: 1180px; }
 /* Computador: acessos em uma linha de quatro; notificações à esquerda, pendências à direita */
 @media (min-width: 720px) { .painel-acessos { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (min-width: 960px) {
-  .painel-colunas { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 20px; margin-top: 20px; }
+  /* Pendências (pedem ação) à esquerda; treinos concluídos à direita */
+  .painel-colunas { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 20px; margin-top: 20px; }
+  .painel-acessos .atalho { min-height: 92px; }
   .painel-acessos { gap: 14px; }
   main.painel { padding: 28px 24px; }
 }
-/* Barra do administrador dentro das áreas: voltar ao Início + nome da área atual */
-.nav-area { align-items: center; justify-content: flex-start; gap: 14px; }
-.nav-area button { flex: 0 0 auto; min-width: 0; padding: 0 14px; color: var(--txt); border-color: var(--borda2); }
-.nav-area-atual { color: var(--verde2); font-size: var(--t-base); font-weight: 800; }
-@media (min-width: 900px) { .app > nav.nav-area { padding-left: max(12px, calc((100vw - 1180px) / 2 + 8px)); } }
 
 @media (max-width: 440px) {
   .painel-cab h3 { font-size: var(--t-lg); }

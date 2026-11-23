@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabase'
 import { mensagemErro } from './erros'
 import Voltar from './Voltar'
+import { CabecalhoPagina } from './Cabecalho'
 import Icone from './Icone'
 import './editor.css'
 import './aluna.css'
@@ -43,7 +44,7 @@ function dias(ex) {
   return Object.values(m).sort((a, b) => a.t - b.t)
 }
 
-export default function Historico({ alunaId, titulo, onVoltar }) {
+export default function Historico({ alunaId, titulo, onVoltar, trilha }) {
   const [regs, setRegs] = useState(null)
   const [sel, setSel] = useState(null)
   const [periodo, setPeriodo] = useState(90)
@@ -110,7 +111,9 @@ export default function Historico({ alunaId, titulo, onVoltar }) {
     const filtrados = todos.filter(d => d.t >= corte)
     return (
       <>
-        {cab(ex.nome, 'Evolução da carga principal', () => setSel(null))}
+        {trilha
+          ? <CabecalhoPagina trilha={[...trilha, { rotulo: 'Cargas', onClick: () => setSel(null) }, { rotulo: ex.nome }]} titulo={ex.nome} subtitulo="Evolução da carga principal" />
+          : cab(ex.nome, 'Evolução da carga principal', () => setSel(null))}
         <div className="chips">
           {[[30, '30 dias'], [90, '3 meses'], [0, 'Tudo']].map(([v, l]) => (
             <button key={v} className={periodo === v ? 'on' : ''} onClick={() => setPeriodo(v)}>{l}</button>
@@ -153,8 +156,9 @@ export default function Historico({ alunaId, titulo, onVoltar }) {
 
   return (
     <>
-      {titulo ? cab(titulo, null, onVoltar) : null}
-      {titulo && <div className="regua-div" aria-hidden="true" />}
+      {trilha
+        ? <CabecalhoPagina trilha={[...trilha, { rotulo: 'Cargas' }]} titulo={titulo} subtitulo="Melhor série principal de cada exercício. Escolha um exercício para ver a evolução." />
+        : <>{titulo ? cab(titulo, null, onVoltar) : null}{titulo && <div className="regua-div" aria-hidden="true" />}</>}
       {exercicios.length === 0 && <p className="muted">Ainda não há cargas registradas.</p>}
       {exercicios.map(ex => (
         <div key={ex.id} className="card lista-ex" onClick={() => setSel(ex.id)}>

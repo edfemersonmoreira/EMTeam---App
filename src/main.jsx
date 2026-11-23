@@ -8,6 +8,7 @@ import { aplicarTema, temaSalvo } from './tema'
 import './marca.css'
 import './series.css'
 import './ui.css'
+import './admin.css'
 aplicarTema(temaSalvo())
 createRoot(document.getElementById('root')).render(
   <ErrorBoundary>

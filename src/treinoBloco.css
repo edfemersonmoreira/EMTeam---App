@@ -27,8 +27,14 @@
 
 /* Telas estreitas: ações do dia e do exercício passam para a linha de baixo, sem estourar a largura */
 @media (max-width: 480px) {
-  .treino-cab-acoes, .item-acoes { width: 100%; margin-left: 0; justify-content: flex-end; align-items: center; }
-  .treino-cab-acoes .mini:not(.icone), .item-acoes .mini:not(.icone) { flex: 1; }
+  .item-acoes { width: 100%; margin-left: 0; justify-content: flex-end; align-items: center; }
+  .item-acoes .mini:not(.icone) { flex: 1; }
   .item-acoes .status-salvo { margin-right: auto; }
   .treino-corpo { padding: 12px; }
 }
+
+/* Observação geral e botões de acrescentar: discretos, abaixo dos tipos de série */
+.item-obs { margin: var(--e-2) 0 0; min-height: 40px; padding: 8px 10px; }
+.item-rodape { display: flex; flex-wrap: wrap; gap: var(--e-2); margin-top: var(--e-2); }
+.item-rodape .mini { display: inline-flex; align-items: center; gap: var(--e-1); font-size: var(--t-sm); font-weight: 700; color: var(--txt2); }
+.item-rodape .mini:hover { color: var(--txt); }

@@ -71,14 +71,15 @@ header .link { font-size: var(--t-md); }
 .marca { font-weight: 800; font-size: var(--t-xl); letter-spacing: -.01em; }
 .marca.grande { display: block; font-size: var(--t-3xl); margin-bottom: 18px; }
 
-nav { display: flex; gap: 6px; padding: 8px 12px; background: var(--bg2); border-bottom: 1px solid var(--borda); }
-nav button {
+/* Menu do administrador (abas no celular; barra lateral no computador, em admin.css) */
+.nav-admin { display: flex; gap: 6px; padding: 8px 12px; overflow-x: auto; background: var(--bg2); border-bottom: 1px solid var(--borda); }
+.nav-admin button {
   flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 10px;
   border: 1px solid transparent; border-radius: var(--r-ctl); background: transparent; color: var(--txt2);
   font-size: var(--t-base); font-weight: 700; cursor: pointer; transition: background var(--ease), color var(--ease), border-color var(--ease);
 }
-nav button:hover { color: var(--txt); }
-nav button.on { background: var(--card); color: var(--verde2); border-color: var(--borda2); }
+.nav-admin button:hover { color: var(--txt); }
+.nav-admin button.on { background: var(--card); color: var(--verde2); border-color: var(--borda2); }
 main { max-width: 560px; margin: 0 auto; padding: 16px; }
 main.wide { max-width: 900px; }
 @media (min-width: 900px) { main { padding: 24px 16px; } }
@@ -118,7 +119,7 @@ input:disabled, textarea:disabled { opacity: .5; }
 .icone-btn:hover { border-color: var(--verde2); background: rgb(var(--acento-rgb) / .08); }
 .btn:focus-visible, .icone-btn:focus-visible, .link-texto:focus-visible, .chip:focus-visible, .chk:focus-visible,
 .dia:focus-visible, .dia-sem:focus-visible, .atalho:focus-visible, .linha-ex:focus-visible, .avatar:focus-visible,
-nav button:focus-visible, .mini:focus-visible { outline: 2px solid var(--verde2); outline-offset: 2px; }
+.nav-admin button:focus-visible, .mini:focus-visible { outline: 2px solid var(--verde2); outline-offset: 2px; }
 
 .card { background: var(--card); border: 1px solid var(--borda); border-radius: var(--r-card); padding: 16px; margin: 12px 0; }
 .card.off { opacity: .55; }
