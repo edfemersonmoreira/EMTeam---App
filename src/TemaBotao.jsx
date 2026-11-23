@@ -9,7 +9,7 @@ export default function TemaBotao() {
   const claro = tema === 'claro'
   const rotulo = claro ? 'Mudar para o tema escuro' : 'Mudar para o tema claro'
   return (
-    <button className="link tema-btn" onClick={() => setTema(trocarTema())} aria-label={rotulo} title={rotulo}>
+    <button className="cab-btn" onClick={() => setTema(trocarTema())} aria-label={rotulo} title={rotulo}>
       <Icone nome={claro ? 'lua' : 'sol'} tam={18} />
     </button>
   )

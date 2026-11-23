@@ -45,11 +45,11 @@ body:has(.login) {
 /* Foto da aluna: segundo anel fino, como uma anilha */
 .avatar { box-shadow: 0 0 0 3px var(--bg), 0 0 0 4.5px rgb(var(--acento-rgb) / .45); }
 
-/* Régua de carga: progresso dos exercícios (um traço por exercício) */
-.regua-prog { display: flex; align-items: flex-end; gap: 4px; height: 22px; margin-top: 6px; }
-.regua-prog i { flex: 1; height: 10px; border-radius: 1px; background: var(--borda2); transition: height .2s ease, background .2s ease; }
-.regua-prog i.f { height: 14px; background: var(--verde2); }
-.regua-prog i.a { height: 22px; background: var(--txt); }
+/* Régua de carga: progresso dos exercícios (um traço por exercício). Atual mais alto, feitos em verde, próximos baixos. */
+.regua-prog { display: flex; align-items: flex-end; gap: 4px; height: 16px; margin-top: 6px; }
+.regua-prog i { flex: 1; height: 8px; border-radius: 1px; background: var(--borda2); transition: height .2s ease, background .2s ease; }
+.regua-prog i.f { height: 12px; background: var(--verde); }
+.regua-prog i.a { height: 16px; background: var(--verde2); }
 
 /* Régua de carga: divisor de seção */
 .regua-div {

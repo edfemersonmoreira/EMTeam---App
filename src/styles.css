@@ -64,8 +64,15 @@ header {
 }
 header .link { font-size: var(--t-md); }
 .cab-acoes { display: flex; align-items: center; gap: 8px; }
-.tema-btn { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin-right: 4px; }
-@media (max-width: 360px) { header { gap: 8px; } .cab-acoes { gap: 4px; } .tema-btn { width: 28px; margin-right: 0; } }
+/* Botões do cabeçalho (tema e conta): só ícone, 40 px, discretos */
+.cab-btn {
+  width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; padding: 0;
+  background: transparent; border: 1px solid transparent; border-radius: var(--r-ctl); color: var(--txt2); cursor: pointer;
+  transition: color var(--ease), background var(--ease), border-color var(--ease);
+}
+.cab-btn:hover, .cab-btn[aria-expanded='true'] { color: var(--txt); background: var(--hover); }
+.cab-btn:focus-visible { outline: 2px solid var(--verde2); outline-offset: 2px; }
+@media (max-width: 360px) { header { gap: 8px; } .cab-acoes { gap: 2px; } }
 .logo { height: 36px; width: auto; display: block; }
 .logo.grande { height: auto; width: 78%; max-width: 280px; margin: 0 auto 22px; }
 .marca { font-weight: 800; font-size: var(--t-xl); letter-spacing: -.01em; }

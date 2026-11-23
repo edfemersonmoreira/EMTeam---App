@@ -22,8 +22,8 @@
   .nav-admin button.on svg { color: var(--verde2); }
   .app-admin main.wide, .app-admin main.painel { padding: var(--e-6) var(--e-8) var(--e-8); }
 }
-/* Altura do cabeçalho do app (logo de 28 px + respiro), usada para a barra lateral grudar logo abaixo dele */
-:root { --cab-alt: calc(53px + env(safe-area-inset-top, 0px)); }
+/* Altura do cabeçalho do app (botões de 40 px + respiro + borda), usada para a barra lateral grudar logo abaixo dele */
+:root { --cab-alt: calc(65px + env(safe-area-inset-top, 0px)); }
 
 /* ----- Trilha de navegação ----- */
 .trilha ol { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; margin: 0 0 var(--e-2); padding: 0; list-style: none; }

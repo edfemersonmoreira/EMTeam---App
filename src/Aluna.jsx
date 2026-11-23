@@ -205,6 +205,7 @@ export default function Aluna({ perfil }) {
         <span><i className="pt sem" />Descanso</span>
       </div>
 
+      <div className="secoes">
       {seqN > 0 && (
         <button className="linha-sec" onClick={() => setTela('alongamentos')}>
           <span className="ico"><Icone nome="alongar" tam={22} /></span>
@@ -214,7 +215,7 @@ export default function Aluna({ perfil }) {
       )}
 
       {(aero.presc.length > 0 || aero.ativa) && (
-        <button className="linha-sec" style={{ marginTop: 10 }} onClick={() => setTela('aerobico')}>
+        <button className="linha-sec" onClick={() => setTela('aerobico')}>
           <span className="ico"><Icone nome="coracao" tam={22} /></span>
           <span className="grow">
             <strong>Aeróbico</strong>
@@ -228,17 +229,19 @@ export default function Aluna({ perfil }) {
         </button>
       )}
 
-      <div className="atalhos">
-        <button className="atalho" onClick={() => setTela('historico')}>
-          <Icone nome="grafico" tam={22} />
-          <span>Histórico de cargas</span>
-        </button>
-        {WHATSAPP && (
-          <a className="atalho" href={zapHref} target="_blank" rel="noreferrer">
-            <Icone nome="conversa" tam={22} />
-            <span>Falar com o treinador</span>
-          </a>
-        )}
+      {/* Mesmo formato para todas as seções: ícone, título, descrição curta e seta */}
+      <button className="linha-sec" onClick={() => setTela('historico')}>
+        <span className="ico"><Icone nome="grafico" tam={22} /></span>
+        <span className="grow"><strong>Histórico de cargas</strong><span className="muted bl">A evolução das suas cargas</span></span>
+        <Icone nome="chevron" tam={16} />
+      </button>
+      {WHATSAPP && (
+        <a className="linha-sec" href={zapHref} target="_blank" rel="noreferrer">
+          <span className="ico"><Icone nome="conversa" tam={22} /></span>
+          <span className="grow"><strong>Falar com o treinador</strong><span className="muted bl">Abre uma conversa no WhatsApp</span></span>
+          <Icone nome="chevron" tam={16} />
+        </a>
+      )}
       </div>
     </main>
   )

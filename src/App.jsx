@@ -13,6 +13,7 @@ import Senha from './Senha'
 import Logo from './Logo'
 import TemaBotao from './TemaBotao'
 import NavAdmin from './NavAdmin'
+import Menu from './Menu'
 
 function Login({ aviso }) {
   const [email, setEmail] = useState('')
@@ -141,9 +142,11 @@ export default function App() {
         <Logo />
         <span className="cab-acoes">
           <TemaBotao />
-          <button className="link" onClick={() => setSenhaAberta(true)}>Senha</button>
-          {' · '}
-          <button className="link" onClick={() => supabase.auth.signOut()}>Sair</button>
+          {/* Conta: trocar senha e sair ficam juntos num menu, longe de toques acidentais */}
+          <Menu rotulo="Conta" icone="usuario" classe="cab-btn" itens={[
+            { rotulo: 'Trocar senha', onClick: () => setSenhaAberta(true) },
+            { rotulo: 'Sair do app', onClick: () => supabase.auth.signOut(), perigo: true },
+          ]} />
         </span>
       </header>
       {conteudo}

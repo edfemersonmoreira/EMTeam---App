@@ -16,6 +16,9 @@ export default function Executar({ treino, perfil, onSair }) {
   const [itens, setItens] = useState([])
   const [sessao, setSessao] = useState(null)
   const [reg, setReg] = useState({})
+  // Séries que a aluna digitou, concluiu ou que já estavam salvas: aparecem como registradas.
+  // As demais mostram a sugestão da última vez em tom mais claro. Só afeta a aparência, não o salvamento.
+  const [tocados, setTocados] = useState({})
   const [ultimo, setUltimo] = useState({})
   const [idx, setIdx] = useState(null)
   const [fim, setFim] = useState(null)
@@ -58,6 +61,7 @@ export default function Executar({ treino, perfil, onSair }) {
         m[`${x.exercicio_id}:${x.numero_serie}`] = { carga: x.carga_kg ?? '', reps: x.repeticoes ?? '', concluida: x.concluida }
       })
       setReg(m)
+      setTocados(Object.fromEntries(Object.keys(m).map(k => [k, true])))
 
       // Última carga de cada exercício, separada por categoria (a principal não se mistura com aquecimento etc.)
       const ids = lista.map(x => x.exercicio_id)
@@ -92,6 +96,7 @@ export default function Executar({ treino, perfil, onSair }) {
   }
 
   function editar(ex, slot, campo, val) {
+    setTocados(t => ({ ...t, [chave(ex, slot)]: true }))
     setReg(r => ({ ...r, [chave(ex, slot)]: { ...valor(ex, slot), [campo]: val } }))
   }
 
@@ -165,7 +170,7 @@ export default function Executar({ treino, perfil, onSair }) {
 
   if (fim) {
     return (
-      <main>
+      <main className="exec">
         <form onSubmit={finalizar} className="card">
           <h3>Finalizar {treino.nome}</h3>
           <p className="muted">Como foi o cansaço hoje? De 1 (leve) a 5 (exaustivo).</p>
@@ -193,7 +198,7 @@ export default function Executar({ treino, perfil, onSair }) {
     const pb = principalDe(ex)
     const u = ultimo[chaveUltimo(ex.exercicio_id, pb.categoria_id)]
     return (
-      <main className={ate ? 'pad-desc' : ''}>
+      <main className={'exec' + (ate ? ' pad-desc' : '')}>
         <div className="topo-exec">
           <button className="icone-btn" onClick={() => setIdx(null)} aria-label="Voltar à lista de exercícios"><Icone nome="voltar" /></button>
           <div className="grow">
@@ -209,6 +214,10 @@ export default function Executar({ treino, perfil, onSair }) {
         {u && <div className="ultima">Última vez ({pb.categorias_serie.nome.toLowerCase()}): {u.carga_kg ?? '–'} kg, {u.repeticoes ?? '–'} repetições</div>}
         {ex.exercicios && ex.exercicios.orientacoes && <p className="orient">{ex.exercicios.orientacoes}</p>}
         {ex.observacao && <p className="orient"><strong>Observação:</strong> {ex.observacao}</p>}
+
+        {ex.slots.some(s => !valor(ex, s).concluida && !tocados[chave(ex, s)] && (valor(ex, s).carga !== '' || valor(ex, s).reps !== '')) && (
+          <p className="dica-sugestao">Números em cinza são da última vez. Ajuste se precisar e toque em <Icone nome="check" tam={14} /> para registrar.</p>
+        )}
 
         {ex.blocos.map((b, bi) => {
           const cat = b.categorias_serie
@@ -226,8 +235,9 @@ export default function Executar({ treino, perfil, onSair }) {
               <div className="series">
                 {slotsB.map(slot => {
                   const v = valor(ex, slot)
+                  const sug = !v.concluida && !tocados[chave(ex, slot)] ? ' sugerido' : ''
                   return (
-                    <div key={slot.numero} className={'serie' + (v.concluida ? ' done' : '')}>
+                    <div key={slot.numero} className={'serie' + (v.concluida ? ' done' : '') + sug}>
                       <span className="n">{slot.k}</span>
                       <label className="campo">
                         <input inputMode="decimal" placeholder={numeroDe(b.carga) || '0'} value={v.carga} aria-label={`Carga da série ${slot.k} de ${cat.nome}`}
@@ -287,7 +297,7 @@ export default function Executar({ treino, perfil, onSair }) {
   const totalSeries = itens.reduce((a, x) => a + x.slots.length, 0)
   const concluidas = itens.reduce((a, x) => a + feitas(x), 0)
   return (
-    <main className={ate ? 'pad-desc' : ''}>
+    <main className={'exec' + (ate ? ' pad-desc' : '')}>
       <div className="topo-exec">
         <button className="icone-btn" onClick={onSair} aria-label="Sair do treino"><Icone nome="voltar" /></button>
         <div className="grow">

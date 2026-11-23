@@ -1,7 +1,7 @@
 /* Prescrição do administrador: cada dia de treino é um bloco próprio, fácil de distinguir do vizinho */
 
 /* Navegação entre os dias (aparece quando a ficha tem mais de um treino) */
-.treino-nav { position: sticky; top: calc(64px + env(safe-area-inset-top, 0px)); z-index: 5; display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; background: var(--bg); }
+.treino-nav { position: sticky; top: var(--cab-alt); z-index: 5; display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; background: var(--bg); }
 
 /* O bloco do dia */
 .treino-bloco { scroll-margin-top: 140px; margin: 32px 0; border: 1px solid var(--borda2); border-radius: var(--r-card); background: var(--bg2); overflow: hidden; }

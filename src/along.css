@@ -19,3 +19,9 @@
 .acesso-linha { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--borda); cursor: pointer; }
 .acesso-linha input[type='checkbox'] { width: 22px; height: 22px; margin: 0; padding: 0; accent-color: var(--verde2); flex: none; }
 
+
+/* Seções da tela inicial da aluna: uma lista única, no mesmo formato */
+.secoes { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+.secoes .linha-sec { margin-top: 0; }
+a.linha-sec { text-decoration: none; }
+.linha-sec:focus-visible { outline: 2px solid var(--verde2); outline-offset: 2px; }

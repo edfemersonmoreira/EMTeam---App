@@ -77,7 +77,16 @@
 .chk:hover { border-color: var(--verde2); }
 .chk:active { transform: scale(.95); }
 .chk.on { background: var(--verde2); border-color: var(--verde2); color: var(--on-acento); }
-.acoes-exec { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; }
+.acoes-exec { display: flex; flex-direction: column; align-items: stretch; gap: 8px; margin-top: 18px; }
+.acoes-exec .btn { width: 100%; min-height: 52px; }
+.acoes-exec .link-texto { align-self: center; }
+/* Sugestão da última vez (ainda não registrada): mesmo campo, número em tom mais claro */
+.serie.sugerido .campo input { color: var(--txt2); font-weight: 600; }
+.dica-sugestao { margin: 12px 0 0; color: var(--txt2); font-size: var(--t-sm); }
+.dica-sugestao svg { display: inline; vertical-align: -2px; color: var(--verde2); }
+/* Durante o treino, a tela tem o próprio cabeçalho (voltar + nome do treino); o do app sai de cena */
+.app:has(> main.exec) > header { display: none; }
+main.exec { padding-top: calc(16px + env(safe-area-inset-top, 0px)); }
 .descanso {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; justify-content: space-between; align-items: center;
   padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--verde); color: var(--sobre-verde);
