@@ -4,6 +4,8 @@ import { mensagemErro } from './erros'
 import Voltar from './Voltar'
 import { CabecalhoPagina } from './Cabecalho'
 import Icone from './Icone'
+import ResumoTreino from './Resumo'
+import { fmtDuracaoSessao } from './resumoUtil'
 import './editor.css'
 import './aluna.css'
 
@@ -51,6 +53,18 @@ export default function Historico({ alunaId, titulo, onVoltar, trilha }) {
   const [msg, setMsg] = useState('')
 
   const [outras, setOutras] = useState([])
+  const [aba, setAba] = useState('exercicios')        // exercicios | treinos
+  const [sessoes, setSessoes] = useState(null)        // treinos finalizados, para abrir o resumo de cada um
+  const [sessaoSel, setSessaoSel] = useState(null)
+
+  // Treinos realizados: só leitura das sessões finalizadas (o resumo é calculado a partir dos registros já salvos)
+  useEffect(() => {
+    if (aba !== 'treinos' || sessoes) return
+    supabase.from('sessoes').select('id, treino_nome, iniciada_em, finalizada_em')
+      .eq('aluna_id', alunaId).not('finalizada_em', 'is', null)
+      .order('finalizada_em', { ascending: false }).limit(60)
+      .then(({ data, error }) => { if (error) setMsg(mensagemErro(error)); else setSessoes(data || []) })
+  }, [aba, alunaId])
 
   // Histórico de cargas: somente séries da categoria Principal (view registros_principais)
   useEffect(() => {
@@ -103,6 +117,12 @@ export default function Historico({ alunaId, titulo, onVoltar, trilha }) {
 
   if (msg) return <p className="erro">{msg}</p>
   if (!regs) return <p className="muted">Carregando…</p>
+
+  if (sessaoSel) {
+    const fechar = () => setSessaoSel(null)
+    return <ResumoTreino sessaoId={sessaoSel} onFechar={fechar} rotuloFechar="Voltar aos treinos"
+      voltar={trilha ? null : fechar} trilha={trilha ? [...trilha, { rotulo: 'Treinos realizados', onClick: fechar }] : null} />
+  }
 
   if (sel) {
     const ex = exercicios.find(e => e.id === sel)
@@ -159,8 +179,32 @@ export default function Historico({ alunaId, titulo, onVoltar, trilha }) {
       {trilha
         ? <CabecalhoPagina trilha={[...trilha, { rotulo: 'Cargas' }]} titulo={titulo} subtitulo="Melhor série principal de cada exercício. Escolha um exercício para ver a evolução." />
         : <>{titulo ? cab(titulo, null, onVoltar) : null}{titulo && <div className="regua-div" aria-hidden="true" />}</>}
-      {exercicios.length === 0 && <p className="muted">Ainda não há cargas registradas.</p>}
-      {exercicios.map(ex => (
+      <div className="chips" role="tablist" aria-label="Ver por">
+        <button role="tab" aria-selected={aba === 'exercicios'} className={aba === 'exercicios' ? 'on' : ''} onClick={() => setAba('exercicios')}>Exercícios</button>
+        <button role="tab" aria-selected={aba === 'treinos'} className={aba === 'treinos' ? 'on' : ''} onClick={() => setAba('treinos')}>Treinos realizados</button>
+      </div>
+      {aba === 'treinos' && (
+        !sessoes ? <p className="muted">Carregando…</p>
+          : sessoes.length === 0 ? <p className="muted">Nenhum treino finalizado ainda.</p>
+          : (
+            <div className="lista-escolha lista-treinos">
+              {sessoes.map(s => {
+                const dur = fmtDuracaoSessao(s.iniciada_em, s.finalizada_em)
+                const quando = new Date(s.finalizada_em).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })
+                return (
+                  <button key={s.id} className="linha-ex" onClick={() => setSessaoSel(s.id)}>
+                    <span className="num cat-ico"><Icone nome="dumbbell" tam={16} /></span>
+                    <span className="grow"><strong>{s.treino_nome || 'Treino'}</strong><span className="muted bl">{quando}{dur ? ` · ${dur}` : ''}</span></span>
+                    <span className="muted">Resumo</span>
+                    <Icone nome="chevron" tam={16} />
+                  </button>
+                )
+              })}
+            </div>
+          )
+      )}
+      {aba === 'exercicios' && exercicios.length === 0 && <p className="muted">Ainda não há cargas registradas.</p>}
+      {aba === 'exercicios' && exercicios.map(ex => (
         <div key={ex.id} className="card lista-ex" onClick={() => setSel(ex.id)}>
           <div>
             <strong>{ex.nome}</strong>

@@ -5,6 +5,7 @@ import { ytEmbed } from './Exercicios'
 import Icone from './Icone'
 import { blocosDoExercicio, expandir, chaveUltimo, resumo } from './seriesUtil'
 import './aluna.css'
+import ResumoTreino from './Resumo'
 
 const fmtT = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 const primeiroNumero = t => { const m = String(t || '').match(/\d+/); return m ? m[0] : '' }
@@ -19,6 +20,7 @@ export default function Executar({ treino, perfil, onSair }) {
   // Séries que a aluna digitou, concluiu ou que já estavam salvas: aparecem como registradas.
   // As demais mostram a sugestão da última vez em tom mais claro. Só afeta a aparência, não o salvamento.
   const [tocados, setTocados] = useState({})
+  const [resumoDe, setResumoDe] = useState(null)   // sessão finalizada: mostra o resumo antes de voltar ao início
   const [ultimo, setUltimo] = useState({})
   const [idx, setIdx] = useState(null)
   const [fim, setFim] = useState(null)
@@ -152,7 +154,8 @@ export default function Executar({ treino, perfil, onSair }) {
       finalizada_em: new Date().toISOString(), cansaco: fim.cansaco || null, observacao: fim.obs || null,
     }).eq('id', sessao.id)
     if (error) return setMsg(mensagemErro(error))
-    onSair()
+    setAte(null)
+    setResumoDe(sessao.id)
   }
 
   if (carregando) return <p className="center">Carregando treino…</p>
@@ -167,6 +170,10 @@ export default function Executar({ treino, perfil, onSair }) {
       </div>
     </div>
   )
+
+  if (resumoDe) {
+    return <main><ResumoTreino sessaoId={resumoDe} onFechar={onSair} rotuloFechar="Voltar ao início" /></main>
+  }
 
   if (fim) {
     return (
