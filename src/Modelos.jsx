@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 import { mensagemErro } from './erros'
 import Icone from './Icone'
+import Menu from './Menu'
+import Voltar from './Voltar'
+import { useDialogo } from './Dialogo'
+import { useSalvamento, StatusSalvo } from './Salvamento'
 import Categorias from './Categorias'
 import CategoriaTreino from './CategoriaTreino'
 import { Bloco } from './Editor'
@@ -42,14 +46,19 @@ function ItemModelo({ it, i, total, cats, onMove, onRemove, onErro, onGerenciar 
   const principal = cats.find(c => c.principal)
   const [blocos, setBlocos] = useState(() => blocosDe(it, principal && principal.id))
   const [obs, setObs] = useState(it.observacao ?? '')
+  const salvo = useSalvamento()
+  const { confirmar } = useDialogo()
+  const nome = it.exercicios ? it.exercicios.nome : 'exercício'
 
   async function persistir(novos) {
     setBlocos(novos)
     const p = novos.find(b => { const c = cats.find(x => x.id === b.categoria_id); return c && c.principal }) || novos[0]
-    const { error } = await supabase.from('modelo_itens').update({
-      blocos: limpar(novos), series: p.series || 1, repeticoes: p.repeticoes || '10', descanso_seg: p.descanso_seg ?? null,
-    }).eq('id', it.id)
-    return error ? mensagemErro(error) : ''
+    return salvo.rodar(async () => {
+      const { error } = await supabase.from('modelo_itens').update({
+        blocos: limpar(novos), series: p.series || 1, repeticoes: p.repeticoes || '10', descanso_seg: p.descanso_seg ?? null,
+      }).eq('id', it.id)
+      return error ? mensagemErro(error) : ''
+    })
   }
   const salvarBloco = async (k, campos) => persistir(blocos.map(b => (b._k === k ? { ...b, ...campos } : b)))
   async function addBloco() {
@@ -61,18 +70,27 @@ function ItemModelo({ it, i, total, cats, onMove, onRemove, onErro, onGerenciar 
   async function moverBloco(j, d) { onErro(await persistir(mover(blocos, j, d))) }
   async function removerBloco(b) {
     if (blocos.length <= 1) return onErro('O exercício precisa ter pelo menos um tipo de série.')
+    const cat = cats.find(c => c.id === b.categoria_id)
+    if (!(await confirmar({ titulo: `Remover ${cat ? cat.nome.toLowerCase() : 'este tipo de série'}?`, texto: `Sai de ${nome} neste modelo.`, acao: 'Remover', perigo: true }))) return
     onErro(await persistir(blocos.filter(x => x._k !== b._k)))
   }
-  async function salvarObs() { await supabase.from('modelo_itens').update({ observacao: obs || null }).eq('id', it.id) }
+  const obsSalva = useRef(it.observacao ?? null)
+  async function salvarObs() {
+    const novo = obs || null
+    if (novo === obsSalva.current) return
+    const erro = await salvo.rodar(async () => { const { error } = await supabase.from('modelo_itens').update({ observacao: novo }).eq('id', it.id); return error ? mensagemErro(error) : '' })
+    if (!erro) obsSalva.current = novo
+  }
 
   return (
     <div className="item">
       <div className="topo">
         <strong>{i + 1}. {it.exercicios ? it.exercicios.nome : ''}</strong>
         <div className="row" style={{ margin: 0 }}>
-          <button className="mini" disabled={i === 0} onClick={() => onMove(i, -1)} aria-label="Subir exercício">↑</button>
-          <button className="mini" disabled={i === total - 1} onClick={() => onMove(i, 1)} aria-label="Descer exercício">↓</button>
-          <button className="mini" onClick={() => onRemove(it)} aria-label="Remover exercício">✕</button>
+          <StatusSalvo s={salvo} />
+          <button className="mini icone" disabled={i === 0} onClick={() => onMove(i, -1)} aria-label={`Subir ${nome}`} title="Subir"><Icone nome="cima" tam={16} /></button>
+          <button className="mini icone" disabled={i === total - 1} onClick={() => onMove(i, 1)} aria-label={`Descer ${nome}`} title="Descer"><Icone nome="baixo" tam={16} /></button>
+          <button className="mini icone perigo" onClick={() => onRemove(it)} aria-label={`Remover ${nome}`} title="Remover"><Icone nome="x" tam={16} /></button>
         </div>
       </div>
       {blocos.map((b, j) => (
@@ -98,6 +116,8 @@ function EditorModelo({ id, onVoltar }) {
   const [gerenciar, setGerenciar] = useState(false)
   const [msg, setMsg] = useState('')
   const [recarga, setRecarga] = useState(0)
+  const salvo = useSalvamento()
+  const { confirmar } = useDialogo()
   const migrado = !!modelo && 'categoria' in modelo   // false enquanto a migração da Etapa 8 não foi rodada
 
   async function carregar() {
@@ -121,8 +141,8 @@ function EditorModelo({ id, onVoltar }) {
     if (!x.nome.trim()) return setMsg('Dê um nome ao modelo.')
     const dados = { nome: x.nome.trim() }
     if (migrado) { dados.categoria = x.categoria.trim() || null; dados.categoria_treino_id = x.categoria_treino_id || null; dados.atualizado_em = new Date().toISOString() }
-    const { error } = await supabase.from('modelos').update(dados).eq('id', id)
-    setMsg(error ? mensagemErro(error) : (!migrado && (novo.categoria !== undefined || novo.categoria_treino_id !== undefined) ? MSG_MIGRACAO : ''))
+    const erro = await salvo.rodar(async () => { const { error } = await supabase.from('modelos').update(dados).eq('id', id); return error ? mensagemErro(error) : '' })
+    setMsg(erro || (!migrado && (novo.categoria !== undefined || novo.categoria_treino_id !== undefined) ? MSG_MIGRACAO : ''))
   }
   async function adicionar(ex) {
     const principal = cats.find(c => c.principal)
@@ -140,19 +160,20 @@ function EditorModelo({ id, onVoltar }) {
     carregar()
   }
   async function remover(it) {
+    if (!(await confirmar({ titulo: `Remover ${it.exercicios ? it.exercicios.nome : 'este exercício'}?`, texto: 'Sai deste modelo. As fichas que já receberam o modelo não mudam.', acao: 'Remover', perigo: true }))) return
     const { error } = await supabase.from('modelo_itens').delete().eq('id', it.id)
     if (error) return setMsg(mensagemErro(error))
     carregar()
   }
 
   if (gerenciar) return <Categorias onVoltar={() => setGerenciar(false)} />
-  if (!modelo || !pronto) return <><button className="btn sec" onClick={onVoltar}>← Voltar</button><p className="muted">{msg || 'Carregando…'}</p></>
+  if (!modelo || !pronto) return <><Voltar onClick={onVoltar} rotulo="Modelos" /><p className="muted">{msg || 'Carregando…'}</p></>
   const filtrados = biblioteca.filter(x => `${x.nome} ${x.grupo_muscular || ''}`.toLowerCase().includes(busca.toLowerCase())).slice(0, 30)
 
   return (
     <>
-      <button className="btn sec" onClick={onVoltar}>← Voltar aos modelos</button>
-      <h3>Modelo de treino</h3>
+      <Voltar onClick={onVoltar} rotulo="Modelos" />
+      <div className="topo"><h3>Modelo de treino</h3><StatusSalvo s={salvo} /></div>
       <input placeholder="Nome do modelo" value={campos.nome} onChange={e => setCampos({ ...campos, nome: e.target.value })} onBlur={() => salvarCampos()} />
       <div className="row wrap" style={{ alignItems: 'center' }}>
         <input list="categorias-modelo" placeholder="Categoria do modelo (opcional)" value={campos.categoria} style={{ flex: 1, minWidth: 160 }} disabled={!migrado}
@@ -251,7 +272,7 @@ function InserirModelo({ modelo, cats, onFechar }) {
 
   return (
     <>
-      <button className="btn sec" onClick={onFechar}>← Voltar aos modelos</button>
+      <Voltar onClick={onFechar} rotulo="Modelos" />
       <h3>Inserir "{modelo.nome}" em uma ficha</h3>
       <div className="card">
         <strong>O que será copiado</strong>
@@ -303,6 +324,7 @@ function Biblioteca({ cats, onEditar, onInserir }) {
   const [aberto, setAberto] = useState(null)
   const [previa, setPrevia] = useState({})
   const [msg, setMsg] = useState('')
+  const { confirmar, pedirTexto } = useDialogo()
 
   async function carregar() {
     const { data, error } = await supabase.from('modelos').select('*, modelo_itens(id)').order('criado_em', { ascending: false })
@@ -314,7 +336,7 @@ function Biblioteca({ cats, onEditar, onInserir }) {
   useEffect(() => { carregar() }, [])
 
   async function novo() {
-    const nome = window.prompt('Nome do novo modelo:')
+    const nome = await pedirTexto({ titulo: 'Novo modelo de treino', rotulo: 'Nome do modelo', placeholder: 'Por exemplo, Inferiores, foco em glúteos', acao: 'Criar modelo' })
     if (!nome || !nome.trim()) return
     const { data, error } = await supabase.from('modelos').insert({ nome: nome.trim() }).select().single()
     if (error) return setMsg(mensagemErro(error))
@@ -329,7 +351,7 @@ function Biblioteca({ cats, onEditar, onInserir }) {
     }
   }
   async function duplicar(m) {
-    const nome = window.prompt('Nome da cópia:', `${m.nome} (cópia)`)
+    const nome = await pedirTexto({ titulo: `Duplicar ${m.nome}`, rotulo: 'Nome da cópia', valor: `${m.nome} (cópia)`, acao: 'Duplicar' })
     if (!nome || !nome.trim()) return
     let r = await supabase.from('modelos').insert({ nome: nome.trim(), categoria: m.categoria ?? null, categoria_treino_id: m.categoria_treino_id ?? null }).select().single()
     if (r.error) r = await supabase.from('modelos').insert({ nome: nome.trim() }).select().single()   // banco sem a migração da Etapa 8
@@ -346,7 +368,7 @@ function Biblioteca({ cats, onEditar, onInserir }) {
     setMsg(''); carregar()
   }
   async function excluir(m) {
-    if (!window.confirm(`Excluir o modelo "${m.nome}"? As fichas que já receberam esse modelo não são alteradas.`)) return
+    if (!(await confirmar({ titulo: `Excluir o modelo ${m.nome}?`, texto: 'As fichas que já receberam este modelo não mudam.', acao: 'Excluir', perigo: true }))) return
     const { error } = await supabase.from('modelos').delete().eq('id', m.id)
     if (error) return setMsg(mensagemErro(error))
     carregar()
@@ -381,12 +403,14 @@ function Biblioteca({ cats, onEditar, onInserir }) {
               </div>
               <CategoriaTreino categoria={tipoDe(m)} />
             </div>
-            <div className="row wrap">
-              <button className="btn" onClick={() => onInserir(m)}>Inserir em ficha</button>
-              <button className="btn sec" onClick={() => visualizar(m)}>{aberto === m.id ? 'Ocultar' : 'Visualizar'}</button>
-              <button className="btn sec" onClick={() => onEditar(m.id)}>Editar</button>
-              <button className="btn sec" onClick={() => duplicar(m)}>Duplicar</button>
-              <button className="btn sec" onClick={() => excluir(m)}>Excluir</button>
+            <div className="acoes-cartao">
+              <button className="btn sm" onClick={() => onInserir(m)}>Inserir em ficha</button>
+              <button className="btn sec sm" onClick={() => onEditar(m.id)}>Editar</button>
+              <button className="btn fantasma sm" onClick={() => visualizar(m)} aria-expanded={aberto === m.id}>{aberto === m.id ? 'Ocultar exercícios' : 'Ver exercícios'}</button>
+              <Menu rotulo={`Mais ações para ${m.nome}`} itens={[
+                { rotulo: 'Duplicar modelo', onClick: () => duplicar(m) },
+                { rotulo: 'Excluir modelo', onClick: () => excluir(m), perigo: true },
+              ]} />
             </div>
             {aberto === m.id && (
               <div style={{ marginTop: 8 }}>

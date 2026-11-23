@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import { mensagemErro } from './erros'
 import Icone from './Icone'
 import Categorias from './Categorias'
+import Etiqueta from './Etiqueta'
 
 export function ytEmbed(url) {
   if (!url) return null
@@ -25,6 +26,7 @@ export default function Exercicios() {
   const [msg, setMsg] = useState('')
   const [aberto, setAberto] = useState(null)
   const [mostrarCats, setMostrarCats] = useState(false)
+  const [salvando, setSalvando] = useState(false)
 
   async function carregar() {
     const { data, error } = await supabase.from('exercicios').select('*').order('nome')
@@ -37,9 +39,11 @@ export default function Exercicios() {
     e.preventDefault()
     const { id, criado_em, ativo, equipamento, ...campos } = form      // equipamento não é mais usado: fica intacto no banco
     Object.keys(campos).forEach(k => { if (campos[k] === '') campos[k] = null })
+    setSalvando(true)
     const { error } = id
       ? await supabase.from('exercicios').update(campos).eq('id', id)
       : await supabase.from('exercicios').insert(campos)
+    setSalvando(false)
     if (error) return setMsg(mensagemErro(error))
     setForm(null); setMsg(''); carregar()
   }
@@ -74,7 +78,7 @@ export default function Exercicios() {
         <textarea rows="4" placeholder="Orientações técnicas" value={form.orientacoes || ''} onChange={set('orientacoes')} />
         {msg && <p className="erro">{msg}</p>}
         <div className="row">
-          <button className="btn">Salvar exercício</button>
+          <button className="btn" disabled={salvando} aria-busy={salvando}>{salvando ? 'Salvando…' : 'Salvar exercício'}</button>
           <button type="button" className="btn sec" onClick={() => { setForm(null); setMsg('') }}>Cancelar</button>
         </div>
       </form>
@@ -105,7 +109,8 @@ export default function Exercicios() {
               <strong>{ex.nome}</strong>
               {ex.grupo_muscular && <div className="muted">{ex.grupo_muscular}</div>}
             </div>
-            {ex.video_url && <span className="badge"><Icone nome="play" tam={12} /> Vídeo</span>}
+            {!ex.ativo && <Etiqueta>Arquivado</Etiqueta>}
+            {ex.video_url && <Etiqueta tipo="sucesso"><Icone nome="play" tam={12} /> Vídeo</Etiqueta>}
           </div>
           {aberto === ex.id && (
             <>

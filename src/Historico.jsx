@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabase'
 import { mensagemErro } from './erros'
+import Voltar from './Voltar'
+import Icone from './Icone'
 import './editor.css'
 import './aluna.css'
 
@@ -90,7 +92,13 @@ export default function Historico({ alunaId, titulo, onVoltar }) {
     return Object.values(m).sort((a, b) => a.nome.localeCompare(b.nome))
   }, [regs])
 
-  const topo = onVoltar && <button className="btn sec" onClick={sel ? () => setSel(null) : onVoltar}>← Voltar</button>
+  // Cabeçalho no mesmo formato das outras telas: seta de voltar + título (+ subtítulo)
+  const cab = (titulo, sub, voltar) => (
+    <div className="topo-exec">
+      {voltar && <Voltar soIcone onClick={voltar} />}
+      <div className="grow"><h2 style={{ margin: 0 }}>{titulo}</h2>{sub && <div className="muted">{sub}</div>}</div>
+    </div>
+  )
 
   if (msg) return <p className="erro">{msg}</p>
   if (!regs) return <p className="muted">Carregando…</p>
@@ -102,8 +110,7 @@ export default function Historico({ alunaId, titulo, onVoltar }) {
     const filtrados = todos.filter(d => d.t >= corte)
     return (
       <>
-        {onVoltar ? topo : <button className="btn sec" onClick={() => setSel(null)}>← Exercícios</button>}
-        <h3>{ex.nome}</h3>
+        {cab(ex.nome, 'Evolução da carga principal', () => setSel(null))}
         <div className="chips">
           {[[30, '30 dias'], [90, '3 meses'], [0, 'Tudo']].map(([v, l]) => (
             <button key={v} className={periodo === v ? 'on' : ''} onClick={() => setPeriodo(v)}>{l}</button>
@@ -146,8 +153,8 @@ export default function Historico({ alunaId, titulo, onVoltar }) {
 
   return (
     <>
-      {topo}
-      {titulo && <><h3>{titulo}</h3><div className="regua-div" aria-hidden="true" /></>}
+      {titulo ? cab(titulo, null, onVoltar) : null}
+      {titulo && <div className="regua-div" aria-hidden="true" />}
       {exercicios.length === 0 && <p className="muted">Ainda não há cargas registradas.</p>}
       {exercicios.map(ex => (
         <div key={ex.id} className="card lista-ex" onClick={() => setSel(ex.id)}>
@@ -155,7 +162,7 @@ export default function Historico({ alunaId, titulo, onVoltar }) {
             <strong>{ex.nome}</strong>
             <div className="muted">Último registro em {new Date(ex.ultimo).toLocaleDateString('pt-BR')}</div>
           </div>
-          <span>›</span>
+          <Icone nome="chevron" tam={16} />
         </div>
       ))}
     </>

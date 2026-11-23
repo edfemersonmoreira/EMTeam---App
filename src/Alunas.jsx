@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import { mensagemErro } from './erros'
 import Icone from './Icone'
+import Etiqueta from './Etiqueta'
 import './alunas.css'
 
 const iniciais = n => (n || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()
@@ -42,8 +43,10 @@ export default function Alunas({ onFichas, onEvolucao, onAerobico }) {
 
   async function salvar(e) {
     e.preventDefault()
+    setSalvando(true)
     const { error } = await supabase.from('profiles')
       .update({ nome: edit.nome, telefone: edit.telefone || null }).eq('id', edit.id)
+    setSalvando(false)
     if (error) return setMsg(mensagemErro(error))
     setEdit(null); setMsg(''); carregar()
   }
@@ -62,7 +65,7 @@ export default function Alunas({ onFichas, onEvolucao, onAerobico }) {
       <input placeholder="Telefone (opcional)" value={nova.telefone} onChange={e => setNova({ ...nova, telefone: e.target.value })} />
       {msg && <p className="erro">{msg}</p>}
       <div className="row">
-        <button className="btn" disabled={salvando}>{salvando ? 'Cadastrando…' : 'Cadastrar'}</button>
+        <button className="btn" disabled={salvando} aria-busy={salvando}>{salvando ? 'Cadastrando…' : 'Cadastrar'}</button>
         <button type="button" className="btn sec" onClick={() => { setNova(null); setMsg('') }}>Cancelar</button>
       </div>
     </form>
@@ -75,7 +78,7 @@ export default function Alunas({ onFichas, onEvolucao, onAerobico }) {
       <input placeholder="Telefone" value={edit.telefone || ''} onChange={e => setEdit({ ...edit, telefone: e.target.value })} />
       {msg && <p className="erro">{msg}</p>}
       <div className="row">
-        <button className="btn">Salvar</button>
+        <button className="btn" disabled={salvando} aria-busy={salvando}>{salvando ? 'Salvando…' : 'Salvar'}</button>
         <button type="button" className="btn sec" onClick={() => setEdit(null)}>Cancelar</button>
       </div>
     </form>
@@ -91,7 +94,7 @@ export default function Alunas({ onFichas, onEvolucao, onAerobico }) {
           <h2>Alunas</h2>
           <div className="muted">{lista.length === 0 ? 'Nenhuma aluna cadastrada ainda.' : `${ativas} ${ativas === 1 ? 'ativa' : 'ativas'} · ${inativas} ${inativas === 1 ? 'inativa' : 'inativas'}`}</div>
         </div>
-        <button className="btn" onClick={() => { setNova({ nome: '', email: '', senha: '', telefone: '' }); setMsg(''); setOk('') }}>+ Nova aluna</button>
+        <button className="btn" onClick={() => { setNova({ nome: '', email: '', senha: '', telefone: '' }); setMsg(''); setOk('') }}><Icone nome="mais" tam={18} />Nova aluna</button>
       </div>
       {msg && <p className="erro">{msg}</p>}
       {ok && <p className="ok">{ok}</p>}
@@ -102,7 +105,7 @@ export default function Alunas({ onFichas, onEvolucao, onAerobico }) {
             <div className="aluna-dados">
               <div className="aluna-nome">
                 <strong>{a.nome}</strong>
-                {!a.ativa && <span className="badge inativa">Inativa</span>}
+                {!a.ativa && <Etiqueta>Inativa</Etiqueta>}
               </div>
               <div className="muted">{a.telefone || 'sem telefone'}</div>
               <div className="muted">

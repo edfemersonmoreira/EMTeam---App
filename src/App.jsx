@@ -20,21 +20,23 @@ function Login({ aviso }) {
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [erro, setErro] = useState('')
+  const [entrando, setEntrando] = useState(false)
   async function entrar(e) {
     e.preventDefault()
-    setErro('')
+    setErro(''); setEntrando(true)
     const { error } = await supabase.auth.signInWithPassword({ email, password: senha })
+    setEntrando(false)
     if (error) setErro('E-mail ou senha incorretos.')
   }
   return (
     <div className="login">
       <Logo grande />
       <form onSubmit={entrar}>
-        <input type="email" placeholder="E-mail" value={email} onChange={e => setEmail(e.target.value)} required />
-        <input type="password" placeholder="Senha" value={senha} onChange={e => setSenha(e.target.value)} required />
+        <input type="email" placeholder="E-mail" aria-label="E-mail" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required />
+        <input type="password" placeholder="Senha" aria-label="Senha" autoComplete="current-password" value={senha} onChange={e => setSenha(e.target.value)} required />
         {erro && <p className="erro">{erro}</p>}
         {aviso && !erro && <p className="muted">{aviso}</p>}
-        <button className="btn">Entrar</button>
+        <button className="btn" disabled={entrando} aria-busy={entrando}>{entrando ? 'Entrando…' : 'Entrar'}</button>
       </form>
     </div>
   )

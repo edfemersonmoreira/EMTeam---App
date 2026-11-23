@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 import { mensagemErro } from './erros'
 import Icone from './Icone'
+import Voltar from './Voltar'
+import Etiqueta from './Etiqueta'
+import { useDialogo } from './Dialogo'
+import { useSalvamento, StatusSalvo } from './Salvamento'
 import { PSE_ROTULOS, rotuloPse, fmtDuracao, ativo } from './aerobicoUtil'
 import './aerobico.css'
 
@@ -13,22 +17,29 @@ function Prescricao({ p, onMudou, onErro }) {
     modalidade: p.modalidade, tempo_previsto_min: p.tempo_previsto_min ?? '', intensidade: p.intensidade ?? '',
     pse_desejada: p.pse_desejada ?? '', orientacoes: p.orientacoes ?? '',
   })
+  const salvo = useSalvamento()
+  const { confirmar } = useDialogo()
+  const dados = x => ({
+    modalidade: x.modalidade.trim(),
+    tempo_previsto_min: x.tempo_previsto_min === '' ? null : parseInt(x.tempo_previsto_min, 10) || null,
+    intensidade: x.intensidade.trim() || null,
+    pse_desejada: x.pse_desejada === '' ? null : parseInt(x.pse_desejada, 10),
+    orientacoes: x.orientacoes.trim() || null,
+  })
+  const salvoJson = useRef(JSON.stringify(dados(v)))   // só grava quando algum valor mudou
   async function salvar(novo = {}) {
     const x = { ...v, ...novo }
     setV(x)
     if (!x.modalidade.trim()) return onErro('Informe a modalidade.')
-    const { error } = await supabase.from('aerobico_prescricoes').update({
-      modalidade: x.modalidade.trim(),
-      tempo_previsto_min: x.tempo_previsto_min === '' ? null : parseInt(x.tempo_previsto_min, 10) || null,
-      intensidade: x.intensidade.trim() || null,
-      pse_desejada: x.pse_desejada === '' ? null : parseInt(x.pse_desejada, 10),
-      orientacoes: x.orientacoes.trim() || null,
-    }).eq('id', p.id)
-    onErro(error ? mensagemErro(error) : '')
+    const d = dados(x), json = JSON.stringify(d)
+    if (json === salvoJson.current) return
+    const erro = await salvo.rodar(async () => { const { error } = await supabase.from('aerobico_prescricoes').update(d).eq('id', p.id); return error ? mensagemErro(error) : '' })
+    if (!erro) salvoJson.current = json
+    onErro(erro)
   }
   async function alternar() { await supabase.from('aerobico_prescricoes').update({ ativa: !p.ativa }).eq('id', p.id); onMudou() }
   async function excluir() {
-    if (!window.confirm(`Excluir a prescrição "${p.modalidade}"? As atividades já registradas continuam salvas.`)) return
+    if (!(await confirmar({ titulo: `Excluir a prescrição de ${p.modalidade.toLowerCase()}?`, texto: 'As atividades já registradas pela aluna continuam salvas.', acao: 'Excluir', perigo: true }))) return
     const { error } = await supabase.from('aerobico_prescricoes').delete().eq('id', p.id)
     if (error) return onErro(mensagemErro(error))
     onMudou()
@@ -36,6 +47,10 @@ function Prescricao({ p, onMudou, onErro }) {
   const set = c => e => setV({ ...v, [c]: e.target.value })
   return (
     <div className={'card' + (p.ativa ? '' : ' off')}>
+      <div className="topo" style={{ marginBottom: 6 }}>
+        <span className="row" style={{ margin: 0 }}>{!p.ativa && <Etiqueta>Desativada</Etiqueta>}</span>
+        <StatusSalvo s={salvo} />
+      </div>
       <div className="grid3">
         <label>Modalidade<input list="modalidades-aero" value={v.modalidade} onChange={set('modalidade')} onBlur={() => salvar()} /></label>
         <label>Tempo (min)<input type="number" min="1" value={v.tempo_previsto_min} onChange={set('tempo_previsto_min')} onBlur={() => salvar()} /></label>
@@ -46,11 +61,15 @@ function Prescricao({ p, onMudou, onErro }) {
           </select>
         </label>
       </div>
-      <input placeholder="Intensidade (opcional, por exemplo, ritmo leve em que consiga conversar)" value={v.intensidade} onChange={set('intensidade')} onBlur={() => salvar()} />
-      <textarea rows="3" placeholder="Orientações" value={v.orientacoes} onChange={set('orientacoes')} onBlur={() => salvar()} />
+      <label className="campo-rotulo">Intensidade (opcional)
+        <input placeholder="Por exemplo, ritmo leve em que consiga conversar" value={v.intensidade} onChange={set('intensidade')} onBlur={() => salvar()} />
+      </label>
+      <label className="campo-rotulo">Orientações
+        <textarea rows="3" value={v.orientacoes} onChange={set('orientacoes')} onBlur={() => salvar()} />
+      </label>
       <div className="row">
-        <button className="btn sec" onClick={alternar}>{p.ativa ? 'Desativar' : 'Reativar'}</button>
-        <button className="btn sec" onClick={excluir}>Excluir</button>
+        <button className="btn sec sm" onClick={alternar}>{p.ativa ? 'Desativar' : 'Reativar'}</button>
+        <button className="btn fantasma sm" onClick={excluir}><Icone nome="lixeira" tam={16} />Excluir</button>
       </div>
     </div>
   )
@@ -79,12 +98,12 @@ export default function AerobicoAdmin({ aluna, onVoltar }) {
 
   return (
     <>
-      <button className="btn sec" onClick={onVoltar}>← Voltar às alunas</button>
+      <Voltar onClick={onVoltar} rotulo="Alunas" />
       <h3>Aeróbico de {aluna.nome}</h3>
       {msg && <p className="erro">{msg}</p>}
 
       <datalist id="modalidades-aero">{MODALIDADES.map(m => <option key={m} value={m} />)}</datalist>
-      <div className="topo"><strong>Prescrição</strong><button className="btn" onClick={nova}><Icone nome="mais" tam={18} />Nova</button></div>
+      <div className="topo"><strong>Prescrição</strong><button className="btn sm" onClick={nova}><Icone nome="mais" tam={18} />Nova prescrição</button></div>
       {presc.length === 0 && !msg && <p className="muted">Nenhum aeróbico prescrito para esta aluna ainda.</p>}
       {presc.map(p => <Prescricao key={p.id} p={p} onMudou={carregar} onErro={setMsg} />)}
 

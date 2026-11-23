@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import { mensagemErro } from './erros'
 import { ytEmbed } from './Exercicios'
 import Icone from './Icone'
+import Voltar from './Voltar'
 import { hojeLocal, chaveFeito, progresso } from './alongUtil'
 import './along.css'
 
@@ -45,14 +46,14 @@ export default function AlongAluna({ perfil, onVoltar }) {
   const seq = seqs && seqs.find(s => s.id === sel)
   const voltar = () => { if (seq && seqs.length > 1) { setSel(null); setAberto(null) } else onVoltar() }
 
-  if (msg && !seqs) return <><button className="btn sec" onClick={onVoltar}>← Voltar</button><p className="erro">{msg}</p></>
+  if (msg && !seqs) return <><Voltar soIcone onClick={onVoltar} /><p className="erro">{msg}</p></>
   if (!seqs) return <p className="muted">Carregando…</p>
 
   if (!seq) {
     return (
       <>
         <div className="topo-exec">
-          <button className="icone-btn" onClick={onVoltar} aria-label="Voltar"><Icone nome="voltar" /></button>
+          <Voltar soIcone onClick={onVoltar} />
           <div className="grow"><h2 style={{ margin: 0 }}>Alongamentos e Flexibilidade</h2><div className="muted">Para fazer antes do treino</div></div>
         </div>
         {seqs.length === 0 && <p className="muted">Você ainda não tem sequências de alongamento. Fale com o seu treinador.</p>}
@@ -76,7 +77,7 @@ export default function AlongAluna({ perfil, onVoltar }) {
   return (
     <>
       <div className="topo-exec">
-        <button className="icone-btn" onClick={voltar} aria-label="Voltar"><Icone nome="voltar" /></button>
+        <Voltar soIcone onClick={voltar} />
         <div className="grow">
           <h2 style={{ margin: 0 }}>{seq.nome}</h2>
           <div className="muted">{p.feitos} de {p.total} concluídos hoje</div>

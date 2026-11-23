@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import Icone from './Icone'
 import { mensagemErro } from './erros'
 import Editor from './Editor'
+import Menu from './Menu'
+import Voltar from './Voltar'
+import Etiqueta from './Etiqueta'
 import { VALIDADE_PADRAO_SEMANAS, dataValidade, vencimentoDaFicha, diasParaVencer, fmtData } from './painelUtil'
 
 // O banco ainda pode não ter a coluna validade_em (antes da migração): nesse caso a ficha é criada sem ela, como antes.
@@ -18,6 +22,7 @@ export default function Fichas({ aluna, onVoltar }) {
   const [msg, setMsg] = useState('')
   const [ok, setOk] = useState('')
   const [renovar, setRenovar] = useState(null)   // { id, semanas }
+  const [enviando, setEnviando] = useState(false)
 
   async function carregar() {
     const { data, error } = await supabase.from('fichas').select('*')
@@ -32,6 +37,10 @@ export default function Fichas({ aluna, onVoltar }) {
 
   async function criar(e) {
     e.preventDefault()
+    setEnviando(true)
+    try { await criarFicha() } finally { setEnviando(false) }
+  }
+  async function criarFicha() {
     const base = { aluna_id: aluna.id, nome: novo.nome, objetivo: novo.objetivo || null, ativa: false }
     let r = await supabase.from('fichas').insert({ ...base, validade_em: dataValidade(novo.semanas) }).select().single()
     if (faltaColuna(r.error)) r = await supabase.from('fichas').insert(base).select().single()
@@ -63,6 +72,10 @@ export default function Fichas({ aluna, onVoltar }) {
 
   async function duplicar(e) {
     e.preventDefault()
+    setEnviando(true)
+    try { await duplicarFicha() } finally { setEnviando(false) }
+  }
+  async function duplicarFicha() {
     const { data: novaId, error } = await supabase.rpc('duplicar_ficha', {
       p_ficha_id: dup.id, p_aluna_destino: destino, p_nome: dup.novoNome || null,
     })
@@ -89,7 +102,7 @@ export default function Fichas({ aluna, onVoltar }) {
       <div className="muted">Vence em {vencTxt(novo.semanas)}.</div>
       {msg && <p className="erro">{msg}</p>}
       <div className="row">
-        <button className="btn">Criar e montar treinos</button>
+        <button className="btn" disabled={enviando} aria-busy={enviando}>{enviando ? 'Criando…' : 'Criar e montar treinos'}</button>
         <button type="button" className="btn sec" onClick={() => setNovo(null)}>Cancelar</button>
       </div>
     </form>
@@ -108,7 +121,7 @@ export default function Fichas({ aluna, onVoltar }) {
       <div className="muted">Vence em {vencTxt(dup.semanas)}.</div>
       {msg && <p className="erro">{msg}</p>}
       <div className="row">
-        <button className="btn">Duplicar</button>
+        <button className="btn" disabled={enviando} aria-busy={enviando}>{enviando ? 'Duplicando…' : 'Duplicar'}</button>
         <button type="button" className="btn sec" onClick={() => setDup(null)}>Cancelar</button>
       </div>
     </form>
@@ -116,10 +129,10 @@ export default function Fichas({ aluna, onVoltar }) {
 
   return (
     <>
-      <button className="btn sec" onClick={onVoltar}>← Voltar às alunas</button>
-      <div className="topo" style={{ marginTop: 12 }}>
+      <Voltar onClick={onVoltar} rotulo="Alunas" />
+      <div className="topo">
         <h3 style={{ margin: 0 }}>Fichas de {aluna.nome}</h3>
-        <button className="btn" onClick={() => setNovo({ nome: '', objetivo: '', semanas: VALIDADE_PADRAO_SEMANAS })}>+ Nova</button>
+        <button className="btn sm" onClick={() => setNovo({ nome: '', objetivo: '', semanas: VALIDADE_PADRAO_SEMANAS })}><Icone nome="mais" tam={18} />Nova ficha</button>
       </div>
       {msg && <p className="erro">{msg}</p>}
       {ok && <p className="ok">{ok}</p>}
@@ -128,8 +141,8 @@ export default function Fichas({ aluna, onVoltar }) {
         <div key={f.id} className={'card' + (f.arquivada_em ? ' off' : '')}>
           <div className="topo">
             <strong>{f.nome}</strong>
-            {f.ativa && <span className="badge">ativa</span>}
-            {f.arquivada_em && <span className="muted">arquivada</span>}
+            {f.ativa && <Etiqueta tipo="sucesso">Ativa</Etiqueta>}
+            {f.arquivada_em && <Etiqueta>Arquivada</Etiqueta>}
           </div>
           {f.objetivo && <div className="muted">{f.objetivo}</div>}
           {!f.arquivada_em && (() => {
@@ -140,19 +153,20 @@ export default function Fichas({ aluna, onVoltar }) {
             <div className="row wrap">
               <input type="number" min="1" max="104" inputMode="numeric" style={{ width: 90, margin: 0 }} value={renovar.semanas} onChange={e => setRenovar({ ...renovar, semanas: e.target.value })} aria-label="Semanas de validade" />
               <span className="muted">semanas a partir de hoje, até {vencTxt(renovar.semanas)}</span>
-              <button className="btn" onClick={() => salvarValidade(f)}>Salvar</button>
-              <button className="btn sec" onClick={() => setRenovar(null)}>Cancelar</button>
+              <button className="btn sm" onClick={() => salvarValidade(f)}>Salvar</button>
+              <button className="btn sec sm" onClick={() => setRenovar(null)}>Cancelar</button>
             </div>
           )}
-          <div className="row wrap">
-            <button className="btn sec" onClick={() => setEditar(f)}>Abrir</button>
-            {!f.ativa && !f.arquivada_em && <button className="btn sec" onClick={() => ativar(f)}>Ativar</button>}
-            {f.ativa && <button className="btn sec" onClick={() => mudar(f, { ativa: false })}>Desativar</button>}
-            {!f.arquivada_em && <button className="btn sec" onClick={() => setRenovar({ id: f.id, semanas: VALIDADE_PADRAO_SEMANAS })}>Validade</button>}
-            <button className="btn sec" onClick={() => { setDup({ ...f, novoNome: '', semanas: VALIDADE_PADRAO_SEMANAS }); setDestino(aluna.id); setOk('') }}>Duplicar/copiar</button>
-            {f.arquivada_em
-              ? <button className="btn sec" onClick={() => mudar(f, { arquivada_em: null })}>Restaurar</button>
-              : <button className="btn sec" onClick={() => mudar(f, { arquivada_em: new Date().toISOString(), ativa: false })}>Arquivar</button>}
+          <div className="acoes-cartao">
+            <button className="btn sm" onClick={() => setEditar(f)}>Abrir treinos</button>
+            {!f.ativa && !f.arquivada_em && <button className="btn sec sm" onClick={() => ativar(f)}>Ativar</button>}
+            {f.arquivada_em && <button className="btn sec sm" onClick={() => mudar(f, { arquivada_em: null })}>Restaurar</button>}
+            {!f.arquivada_em && <button className="btn fantasma sm" onClick={() => setRenovar({ id: f.id, semanas: VALIDADE_PADRAO_SEMANAS })}>Alterar validade</button>}
+            <Menu rotulo={`Mais ações para ${f.nome}`} itens={[
+              { rotulo: 'Duplicar ou copiar para outra aluna', onClick: () => { setDup({ ...f, novoNome: '', semanas: VALIDADE_PADRAO_SEMANAS }); setDestino(aluna.id); setOk('') } },
+              { rotulo: 'Desativar ficha', onClick: () => mudar(f, { ativa: false }), oculto: !f.ativa },
+              { rotulo: 'Arquivar ficha', onClick: () => mudar(f, { arquivada_em: new Date().toISOString(), ativa: false }), oculto: !!f.arquivada_em },
+            ]} />
           </div>
         </div>
       ))}

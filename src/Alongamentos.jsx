@@ -1,8 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 import { mensagemErro } from './erros'
 import { ytEmbed } from './Exercicios'
 import Icone from './Icone'
+import Menu from './Menu'
+import Voltar from './Voltar'
+import Etiqueta from './Etiqueta'
+import { useDialogo } from './Dialogo'
+import { useSalvamento, StatusSalvo } from './Salvamento'
 import { mover, ultimasDatas } from './alongUtil'
 import './along.css'
 
@@ -17,6 +22,7 @@ function Biblioteca() {
   const [form, setForm] = useState(null)
   const [aberto, setAberto] = useState(null)
   const [msg, setMsg] = useState('')
+  const [salvando, setSalvando] = useState(false)
 
   async function carregar() {
     const { data, error } = await supabase.from('alongamentos').select('*').order('nome')
@@ -28,9 +34,11 @@ function Biblioteca() {
     e.preventDefault()
     const { id, criado_em, ativo, ...campos } = form
     Object.keys(campos).forEach(k => { if (campos[k] === '') campos[k] = null })
+    setSalvando(true)
     const { error } = id
       ? await supabase.from('alongamentos').update(campos).eq('id', id)
       : await supabase.from('alongamentos').insert(campos)
+    setSalvando(false)
     if (error) return setMsg(mensagemErro(error))
     setForm(null); setMsg(''); carregar()
   }
@@ -52,7 +60,7 @@ function Biblioteca() {
       {ytEmbed(form.video_url) && <iframe className="video" src={ytEmbed(form.video_url)} allowFullScreen title="Prévia do vídeo" />}
       {msg && <p className="erro">{msg}</p>}
       <div className="row">
-        <button className="btn">Salvar exercício</button>
+        <button className="btn" disabled={salvando} aria-busy={salvando}>{salvando ? 'Salvando…' : 'Salvar exercício'}</button>
         <button type="button" className="btn sec" onClick={() => { setForm(null); setMsg('') }}>Cancelar</button>
       </div>
     </form>
@@ -69,8 +77,9 @@ function Biblioteca() {
       {filtrados.map(x => (
         <div key={x.id} className={'card' + (x.ativo ? '' : ' off')}>
           <div className="topo" style={{ cursor: 'pointer' }} onClick={() => setAberto(aberto === x.id ? null : x.id)}>
-            <strong>{x.nome}</strong>
-            {x.video_url && <span className="badge"><Icone nome="play" tam={12} /> Vídeo</span>}
+            <strong className="grow">{x.nome}</strong>
+            {!x.ativo && <Etiqueta>Arquivado</Etiqueta>}
+            {x.video_url && <Etiqueta tipo="sucesso"><Icone nome="play" tam={12} /> Vídeo</Etiqueta>}
           </div>
           {aberto === x.id && (
             <>
@@ -91,18 +100,25 @@ function Biblioteca() {
 // ---------- Editor de uma sequência (ou de um modelo) ----------
 function ItemSeq({ it, i, total, onMove, onRemove, onErro }) {
   const [o, setO] = useState(it.orientacao ?? '')
+  const salvo = useSalvamento()
+  const salva = useRef(it.orientacao ?? null)
+  const nome = it.alongamentos ? it.alongamentos.nome : 'exercício'
   async function salvar() {
-    const { error } = await supabase.from('sequencia_alongamento_itens').update({ orientacao: o || null }).eq('id', it.id)
-    onErro(error ? mensagemErro(error) : '')
+    const novo = o || null
+    if (novo === salva.current) return
+    const erro = await salvo.rodar(async () => { const { error } = await supabase.from('sequencia_alongamento_itens').update({ orientacao: novo }).eq('id', it.id); return error ? mensagemErro(error) : '' })
+    if (!erro) salva.current = novo
+    onErro(erro)
   }
   return (
     <div className="item">
       <div className="topo">
         <strong>{it.alongamentos ? it.alongamentos.nome : ''}</strong>
         <div className="row" style={{ margin: 0 }}>
-          <button className="mini" disabled={i === 0} onClick={() => onMove(i, -1)} aria-label="Subir">↑</button>
-          <button className="mini" disabled={i === total - 1} onClick={() => onMove(i, 1)} aria-label="Descer">↓</button>
-          <button className="mini" onClick={() => onRemove(it)} aria-label="Remover">✕</button>
+          <StatusSalvo s={salvo} />
+          <button className="mini icone" disabled={i === 0} onClick={() => onMove(i, -1)} aria-label={`Subir ${nome}`} title="Subir"><Icone nome="cima" tam={16} /></button>
+          <button className="mini icone" disabled={i === total - 1} onClick={() => onMove(i, 1)} aria-label={`Descer ${nome}`} title="Descer"><Icone nome="baixo" tam={16} /></button>
+          <button className="mini icone perigo" onClick={() => onRemove(it)} aria-label={`Remover ${nome}`} title="Remover"><Icone nome="x" tam={16} /></button>
         </div>
       </div>
       <input placeholder="Orientação desta prescrição (por exemplo, 30 s de cada lado)" value={o} onChange={e => setO(e.target.value)} onBlur={salvar} />
@@ -121,11 +137,15 @@ function EditorSequencia({ id, onVoltar }) {
   const [adicionando, setAdicionando] = useState(false)
   const [busca, setBusca] = useState('')
   const [msg, setMsg] = useState('')
+  const salvo = useSalvamento()
+  const { confirmar } = useDialogo()
+  const camposSalvos = useRef('')
 
   async function carregar() {
     const s = await supabase.from('sequencias_alongamento').select('*').eq('id', id).single()
     if (s.error) return setMsg(mensagemErro(s.error))
     setSeq(s.data); setCampos({ nome: s.data.nome, descricao: s.data.descricao || '' })
+    camposSalvos.current = JSON.stringify({ nome: s.data.nome, descricao: s.data.descricao || null })
     const it = await supabase.from('sequencia_alongamento_itens')
       .select('*, alongamentos(nome, descricao, video_url)').eq('sequencia_id', id).order('ordem')
     if (it.error) return setMsg(mensagemErro(it.error))
@@ -148,8 +168,12 @@ function EditorSequencia({ id, onVoltar }) {
 
   async function salvarCampos() {
     if (!campos.nome.trim()) return setMsg('Dê um nome à sequência.')
-    const { error } = await supabase.from('sequencias_alongamento').update({ nome: campos.nome.trim(), descricao: campos.descricao.trim() || null }).eq('id', id)
-    setMsg(error ? mensagemErro(error) : '')
+    const dados = { nome: campos.nome.trim(), descricao: campos.descricao.trim() || null }
+    const json = JSON.stringify(dados)
+    if (json === camposSalvos.current) return
+    const erro = await salvo.rodar(async () => { const { error } = await supabase.from('sequencias_alongamento').update(dados).eq('id', id); return error ? mensagemErro(error) : '' })
+    if (!erro) camposSalvos.current = json
+    setMsg(erro)
   }
   async function adicionar(a) {
     const { error } = await supabase.from('sequencia_alongamento_itens').insert({ sequencia_id: id, alongamento_id: a.id, ordem: itens.length })
@@ -163,6 +187,7 @@ function EditorSequencia({ id, onVoltar }) {
     carregar()
   }
   async function remover(it) {
+    if (!(await confirmar({ titulo: `Remover ${it.alongamentos ? it.alongamentos.nome : 'este exercício'}?`, texto: 'Sai desta sequência. Os registros já feitos pelas alunas continuam salvos.', acao: 'Remover', perigo: true }))) return
     const { error } = await supabase.from('sequencia_alongamento_itens').delete().eq('id', it.id)
     if (error) return setMsg(mensagemErro(error))
     carregar()
@@ -180,15 +205,22 @@ function EditorSequencia({ id, onVoltar }) {
     carregar()
   }
 
-  if (!seq) return <><button className="btn sec" onClick={onVoltar}>← Voltar</button><p className="muted">{msg || 'Carregando…'}</p></>
+  if (!seq) return <><Voltar onClick={onVoltar} rotulo="Alongamentos" /><p className="muted">{msg || 'Carregando…'}</p></>
   const filtrados = biblioteca.filter(x => x.nome.toLowerCase().includes(busca.toLowerCase())).slice(0, 30)
 
   return (
     <>
-      <button className="btn sec" onClick={onVoltar}>← Voltar</button>
-      <h3>{seq.modelo ? 'Modelo de sequência' : 'Sequência'}</h3>
-      <input placeholder="Nome da sequência" value={campos.nome} onChange={e => setCampos({ ...campos, nome: e.target.value })} onBlur={salvarCampos} />
-      <textarea rows="2" placeholder="Descrição (opcional)" value={campos.descricao} onChange={e => setCampos({ ...campos, descricao: e.target.value })} onBlur={salvarCampos} />
+      <Voltar onClick={onVoltar} rotulo="Alongamentos" />
+      <div className="topo">
+        <h3>{seq.modelo ? 'Modelo de sequência' : 'Sequência'}</h3>
+        <span className="row" style={{ margin: 0 }}><StatusSalvo s={salvo} />{!seq.ativa && <Etiqueta>Desativada</Etiqueta>}</span>
+      </div>
+      <label className="campo-rotulo">Nome da sequência
+        <input value={campos.nome} onChange={e => setCampos({ ...campos, nome: e.target.value })} onBlur={salvarCampos} />
+      </label>
+      <label className="campo-rotulo">Descrição (opcional)
+        <textarea rows="2" value={campos.descricao} onChange={e => setCampos({ ...campos, descricao: e.target.value })} onBlur={salvarCampos} />
+      </label>
       {msg && <p className="erro">{msg}</p>}
 
       <div className="card">
@@ -233,6 +265,7 @@ function Listas({ modelo, onAbrir }) {
   const [lista, setLista] = useState([])
   const [msg, setMsg] = useState('')
   const [ok, setOk] = useState('')
+  const { confirmar, pedirTexto } = useDialogo()
 
   async function carregar() {
     const { data, error } = await supabase.from('sequencias_alongamento')
@@ -243,14 +276,14 @@ function Listas({ modelo, onAbrir }) {
   useEffect(() => { carregar() }, [modelo])
 
   async function nova() {
-    const nome = window.prompt(modelo ? 'Nome do novo modelo:' : 'Nome da nova sequência:')
+    const nome = await pedirTexto({ titulo: modelo ? 'Novo modelo de sequência' : 'Nova sequência', rotulo: 'Nome', placeholder: 'Por exemplo, Mobilidade de quadril', acao: 'Criar' })
     if (!nome || !nome.trim()) return
     const { data, error } = await supabase.from('sequencias_alongamento').insert({ nome: nome.trim(), modelo }).select().single()
     if (error) return setMsg(mensagemErro(error))
     onAbrir(data.id)
   }
   async function copiar(s, paraModelo) {
-    const nome = window.prompt(paraModelo ? 'Nome do modelo:' : 'Nome da nova sequência:', s.nome)
+    const nome = await pedirTexto({ titulo: paraModelo ? 'Salvar como modelo' : 'Usar modelo', texto: paraModelo ? 'O modelo fica na aba Modelos e não aparece para as alunas.' : 'Cria uma sequência nova a partir deste modelo. Depois, escolha as alunas.', rotulo: paraModelo ? 'Nome do modelo' : 'Nome da nova sequência', valor: s.nome, acao: paraModelo ? 'Salvar modelo' : 'Criar sequência' })
     if (nome === null) return
     const { data, error } = await supabase.rpc('copiar_sequencia', { p_origem: s.id, p_nome: nome.trim(), p_modelo: paraModelo })
     if (error) return setMsg(mensagemErro(error))
@@ -258,7 +291,7 @@ function Listas({ modelo, onAbrir }) {
     if (!paraModelo) onAbrir(data); else carregar()
   }
   async function excluir(s) {
-    if (!window.confirm(`Excluir "${s.nome}"? Os registros já feitos pelas alunas continuam salvos.`)) return
+    if (!(await confirmar({ titulo: `Excluir ${s.nome}?`, texto: 'Os registros já feitos pelas alunas continuam salvos.', acao: 'Excluir', perigo: true }))) return
     const { error } = await supabase.from('sequencias_alongamento').delete().eq('id', s.id)
     if (error) return setMsg(mensagemErro(error))
     carregar()
@@ -280,14 +313,18 @@ function Listas({ modelo, onAbrir }) {
             <div className="topo">
               <div className="grow">
                 <strong>{s.nome}</strong>
-                <div className="muted">{n} {n === 1 ? 'exercício' : 'exercícios'}{!modelo ? `, ${a} ${a === 1 ? 'aluna' : 'alunas'}` : ''}{!s.ativa ? ', desativada' : ''}</div>
+                <div className="muted">{n} {n === 1 ? 'exercício' : 'exercícios'}{!modelo ? `, ${a} ${a === 1 ? 'aluna' : 'alunas'}` : ''}</div>
               </div>
+              {!s.ativa && <Etiqueta>Desativada</Etiqueta>}
             </div>
-            <div className="row wrap">
-              <button className="btn sec" onClick={() => onAbrir(s.id)}>Abrir</button>
-              {!modelo && <button className="btn sec" onClick={() => copiar(s, true)}>Salvar como modelo</button>}
-              {modelo && <button className="btn sec" onClick={() => copiar(s, false)}>Usar modelo</button>}
-              <button className="btn sec" onClick={() => excluir(s)}>Excluir</button>
+            <div className="acoes-cartao">
+              {modelo
+                ? <><button className="btn sm" onClick={() => copiar(s, false)}>Usar modelo</button><button className="btn sec sm" onClick={() => onAbrir(s.id)}>Editar</button></>
+                : <button className="btn sm" onClick={() => onAbrir(s.id)}>Abrir</button>}
+              <Menu rotulo={`Mais ações para ${s.nome}`} itens={[
+                { rotulo: 'Salvar como modelo', onClick: () => copiar(s, true), oculto: modelo },
+                { rotulo: modelo ? 'Excluir modelo' : 'Excluir sequência', onClick: () => excluir(s), perigo: true },
+              ]} />
             </div>
           </div>
         )

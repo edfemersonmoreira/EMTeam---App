@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import { mensagemErro } from './erros'
 import Icone from './Icone'
+import Voltar from './Voltar'
+import Etiqueta from './Etiqueta'
+import { useDialogo } from './Dialogo'
 
 export const PALETA = ['#20B2AA', '#008080', '#E0A93B', '#6FA8F5', '#A98BF0', '#E5635F', '#F0914B', '#4FC3E8', '#C8B08A', '#9BAAAA']
 
@@ -10,6 +13,7 @@ export default function Categorias({ onVoltar }) {
   const [msg, setMsg] = useState('')
   const [novo, setNovo] = useState({ nome: '', cor: PALETA[3] })
   const [corAberta, setCorAberta] = useState(null)
+  const { confirmar } = useDialogo()
 
   async function carregar() {
     const { data, error } = await supabase.from('categorias_serie').select('*').order('ordem')
@@ -44,7 +48,7 @@ export default function Categorias({ onVoltar }) {
   }
 
   async function excluir(c) {
-    if (!window.confirm(`Excluir a categoria "${c.nome}"?`)) return
+    if (!(await confirmar({ titulo: `Excluir a categoria ${c.nome}?`, texto: 'Se ela já foi usada em prescrições ou registros, desative em vez de excluir.', acao: 'Excluir', perigo: true }))) return
     const { error } = await supabase.from('categorias_serie').delete().eq('id', c.id)
     if (error) return setMsg(error.code === '23503' ? 'Essa categoria já foi usada em prescrições ou registros. Desative-a em vez de excluir.' : mensagemErro(error))
     setMsg(''); carregar()
@@ -52,7 +56,7 @@ export default function Categorias({ onVoltar }) {
 
   return (
     <>
-      <button className="btn sec" onClick={onVoltar}>← Voltar</button>
+      <Voltar onClick={onVoltar} />
       <h3>Tipos de série e técnicas</h3>
       <p className="muted">Cadastre as categorias que você usa na prescrição. Só a categoria Principal alimenta o histórico de cargas e os gráficos. As demais ficam registradas separadamente.</p>
       {msg && <p className="erro">{msg}</p>}
@@ -63,11 +67,12 @@ export default function Categorias({ onVoltar }) {
             <button className="cat-cor" style={{ background: c.cor }} aria-label={`Escolher cor de ${c.nome}`} onClick={() => setCorAberta(corAberta === c.id ? null : c.id)} />
             <input key={c.id + c.nome} style={{ margin: 0, flex: 1, minWidth: 120 }} defaultValue={c.nome} disabled={c.principal} aria-label="Nome da categoria"
               onBlur={e => { const v = e.target.value.trim(); if (v && v !== c.nome) atualizar(c, { nome: v }) }} />
-            {c.principal && <span className="badge">alimenta o histórico</span>}
-            <button className="mini" disabled={i === 0} onClick={() => mover(i, -1)} aria-label="Subir">↑</button>
-            <button className="mini" disabled={i === lista.length - 1} onClick={() => mover(i, 1)} aria-label="Descer">↓</button>
+            {c.principal && <Etiqueta tipo="sucesso">Alimenta o histórico</Etiqueta>}
+            {!c.ativa && <Etiqueta>Desativada</Etiqueta>}
+            <button className="mini icone" disabled={i === 0} onClick={() => mover(i, -1)} aria-label={`Subir ${c.nome}`} title="Subir"><Icone nome="cima" tam={16} /></button>
+            <button className="mini icone" disabled={i === lista.length - 1} onClick={() => mover(i, 1)} aria-label={`Descer ${c.nome}`} title="Descer"><Icone nome="baixo" tam={16} /></button>
             {!c.principal && <button className="mini" onClick={() => atualizar(c, { ativa: !c.ativa })}>{c.ativa ? 'Desativar' : 'Reativar'}</button>}
-            {!c.principal && <button className="mini" onClick={() => excluir(c)} aria-label="Excluir"><Icone nome="x" tam={14} /></button>}
+            {!c.principal && <button className="mini icone perigo" onClick={() => excluir(c)} aria-label={`Excluir ${c.nome}`} title="Excluir"><Icone nome="x" tam={16} /></button>}
           </div>
           {corAberta === c.id && (
             <div className="paleta">

@@ -7,12 +7,15 @@ export default function Senha({ onFechar }) {
   const [s2, setS2] = useState('')
   const [msg, setMsg] = useState('')
   const [ok, setOk] = useState(false)
+  const [salvando, setSalvando] = useState(false)
 
   async function salvar(e) {
     e.preventDefault()
     if (s1.length < 6) return setMsg('Use pelo menos 6 caracteres.')
     if (s1 !== s2) return setMsg('As senhas não conferem.')
+    setSalvando(true)
     const { error } = await supabase.auth.updateUser({ password: s1 })
+    setSalvando(false)
     if (error) return setMsg(mensagemErro(error))
     setMsg(''); setOk(true)
   }
@@ -20,12 +23,12 @@ export default function Senha({ onFechar }) {
   return (
     <form onSubmit={salvar} className="card">
       <h3>Trocar senha</h3>
-      <input type="password" placeholder="Nova senha" value={s1} onChange={e => setS1(e.target.value)} required />
-      <input type="password" placeholder="Repita a nova senha" value={s2} onChange={e => setS2(e.target.value)} required />
+      <input type="password" placeholder="Nova senha" aria-label="Nova senha" autoComplete="new-password" value={s1} onChange={e => setS1(e.target.value)} required />
+      <input type="password" placeholder="Repita a nova senha" aria-label="Repita a nova senha" autoComplete="new-password" value={s2} onChange={e => setS2(e.target.value)} required />
       {msg && <p className="erro">{msg}</p>}
       {ok && <p className="ok">Senha alterada com sucesso.</p>}
       <div className="row">
-        {!ok && <button className="btn">Salvar</button>}
+        {!ok && <button className="btn" disabled={salvando} aria-busy={salvando}>{salvando ? 'Salvando…' : 'Salvar'}</button>}
         <button type="button" className="btn sec" onClick={onFechar}>{ok ? 'Voltar' : 'Cancelar'}</button>
       </div>
     </form>

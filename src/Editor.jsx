@@ -1,8 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 import { mensagemErro } from './erros'
 import Categorias from './Categorias'
 import Icone from './Icone'
+import Menu from './Menu'
+import Voltar from './Voltar'
+import { useDialogo } from './Dialogo'
+import { useSalvamento, StatusSalvo } from './Salvamento'
 import { inserirExercicios, linhasDoModelo } from './prescricao'
 import './editor.css'
 import './treinoBloco.css'
@@ -56,17 +60,22 @@ export function Bloco({ b, i, total, cats, onSalvar, onMove, onRemove, onErro, o
   const cat = cats.find(c => c.id === v.categoria_id)
   const opcoes = cats.filter(c => c.ativa || c.id === v.categoria_id)
 
+  const dados = x => ({
+    categoria_id: x.categoria_id,
+    series: parseInt(x.series, 10) || 1,
+    repeticoes: x.repeticoes || null,
+    carga: x.carga || null,
+    descanso_seg: x.descanso_seg === '' ? null : parseInt(x.descanso_seg, 10),
+    observacao: x.observacao || null,
+  })
+  const salvoJson = useRef(JSON.stringify(dados(v)))   // só grava quando algum valor mudou
   async function salvar(novo = {}) {
     const x = { ...v, ...novo }
     setV(x)
-    const erro = await onSalvar({
-      categoria_id: x.categoria_id,
-      series: parseInt(x.series, 10) || 1,
-      repeticoes: x.repeticoes || null,
-      carga: x.carga || null,
-      descanso_seg: x.descanso_seg === '' ? null : parseInt(x.descanso_seg, 10),
-      observacao: x.observacao || null,
-    })
+    const d = dados(x), json = JSON.stringify(d)
+    if (json === salvoJson.current) return
+    const erro = await onSalvar(d)
+    if (!erro) salvoJson.current = json
     onErro(erro || '')
   }
   const set = c => e => setV({ ...v, [c]: e.target.value })
@@ -83,9 +92,9 @@ export function Bloco({ b, i, total, cats, onSalvar, onMove, onRemove, onErro, o
           </select>
         </div>
         <div className="row" style={{ margin: 0 }}>
-          <button className="mini" disabled={i === 0} onClick={() => onMove(i, -1)} aria-label="Subir tipo de série">↑</button>
-          <button className="mini" disabled={i === total - 1} onClick={() => onMove(i, 1)} aria-label="Descer tipo de série">↓</button>
-          <button className="mini" disabled={total <= 1} onClick={() => onRemove(b)} aria-label="Remover tipo de série">✕</button>
+          <button className="mini icone" disabled={i === 0} onClick={() => onMove(i, -1)} aria-label="Subir tipo de série" title="Subir"><Icone nome="cima" tam={16} /></button>
+          <button className="mini icone" disabled={i === total - 1} onClick={() => onMove(i, 1)} aria-label="Descer tipo de série" title="Descer"><Icone nome="baixo" tam={16} /></button>
+          <button className="mini icone perigo" disabled={total <= 1} onClick={() => onRemove(b)} aria-label="Remover tipo de série" title="Remover"><Icone nome="x" tam={16} /></button>
         </div>
       </div>
       <div className="grid4">
@@ -108,15 +117,24 @@ function Item({ it, i, total, rotulo, cats, onMove, onRemove, onDuplicar, onChan
     series: it.series, repeticoes: it.repeticoes,
     descanso_seg: it.descanso_seg ?? '',
   })
+  const salvo = useSalvamento()
+  const { confirmar } = useDialogo()
+  const nome = it.exercicios?.nome || 'exercício'
 
+  // Os campos salvam ao sair, como antes; o indicador ao lado do nome mostra o resultado.
+  const erroDe = ({ error }) => (error ? mensagemErro(error) : '')
+  const obsSalva = useRef(it.observacao ?? null)   // evita gravar (e piscar "Salvo") quando nada mudou
   async function salvarObs() {
-    await supabase.from('treino_exercicios').update({ observacao: obs || null }).eq('id', it.id)
+    const novo = obs || null
+    if (novo === obsSalva.current) return
+    const erro = await salvo.rodar(async () => erroDe(await supabase.from('treino_exercicios').update({ observacao: novo }).eq('id', it.id)))
+    if (!erro) obsSalva.current = novo
   }
   async function salvarLegado() {
-    await supabase.from('treino_exercicios').update({
+    salvo.rodar(async () => erroDe(await supabase.from('treino_exercicios').update({
       series: parseInt(v.series, 10) || 1, repeticoes: v.repeticoes || '10',
       descanso_seg: v.descanso_seg === '' ? null : parseInt(v.descanso_seg, 10),
-    }).eq('id', it.id)
+    }).eq('id', it.id)))
   }
 
   async function addBloco() {
@@ -131,8 +149,10 @@ function Item({ it, i, total, rotulo, cats, onMove, onRemove, onDuplicar, onChan
     onErro(''); onChange()
   }
   async function salvarBloco(b, campos) {
-    const { error } = await supabase.from('treino_exercicio_series').update(campos).eq('id', b.id)
-    return error ? mensagemErro(error) : ''
+    return salvo.rodar(async () => {
+      const { error } = await supabase.from('treino_exercicio_series').update(campos).eq('id', b.id)
+      return error ? mensagemErro(error) : ''
+    })
   }
   async function moverBloco(j, d) {
     const k = j + d
@@ -143,6 +163,8 @@ function Item({ it, i, total, rotulo, cats, onMove, onRemove, onDuplicar, onChan
   }
   async function removerBloco(b) {
     if (blocos.length <= 1) return onErro('O exercício precisa ter pelo menos um tipo de série.')
+    const cat = cats.find(c => c.id === b.categoria_id)
+    if (!(await confirmar({ titulo: `Remover ${cat ? cat.nome.toLowerCase() : 'este tipo de série'}?`, texto: `Sai de ${nome}. O histórico de cargas da aluna é mantido.`, acao: 'Remover', perigo: true }))) return
     const { error } = await supabase.from('treino_exercicio_series').delete().eq('id', b.id)
     if (error) return onErro(mensagemErro(error))
     onChange()
@@ -154,10 +176,13 @@ function Item({ it, i, total, rotulo, cats, onMove, onRemove, onDuplicar, onChan
         <span className="ex-rotulo" title={`Exercício ${i + 1} deste treino`}>{rotulo}</span>
         <strong className="item-nome">{it.exercicios?.nome}</strong>
         <div className="item-acoes">
-          <button className="mini" disabled={i === 0} onClick={() => onMove(i, -1)} aria-label="Subir exercício">↑</button>
-          <button className="mini" disabled={i === total - 1} onClick={() => onMove(i, 1)} aria-label="Descer exercício">↓</button>
-          <button className="mini" onClick={() => onDuplicar(it, i)} aria-label="Duplicar exercício">Duplicar</button>
-          <button className="mini" onClick={() => onRemove(it)} aria-label="Remover exercício">✕</button>
+          <StatusSalvo s={salvo} />
+          <button className="mini icone" disabled={i === 0} onClick={() => onMove(i, -1)} aria-label={`Subir ${nome}`} title="Subir"><Icone nome="cima" tam={16} /></button>
+          <button className="mini icone" disabled={i === total - 1} onClick={() => onMove(i, 1)} aria-label={`Descer ${nome}`} title="Descer"><Icone nome="baixo" tam={16} /></button>
+          <Menu rotulo={`Mais ações para ${nome}`} itens={[
+            { rotulo: 'Duplicar exercício', onClick: () => onDuplicar(it, i) },
+            { rotulo: 'Remover exercício', onClick: () => onRemove(it), perigo: true },
+          ]} />
         </div>
       </div>
 
@@ -191,6 +216,8 @@ function TreinoCard({ treino, letra, proximaOrdem, biblioteca, cats, catsTreino,
   const [modelos, setModelos] = useState([])
   const [msg, setMsg] = useState('')
   const [ok, setOk] = useState('')
+  const { confirmar, pedirTexto } = useDialogo()
+  const salvoNome = useSalvamento()
 
   // Insere exercícios no fim do treino, cada um com seus tipos de série (padrão: um bloco Principal). Se algo falhar, desfaz o que foi copiado.
   async function inserir(linhas) {
@@ -208,6 +235,7 @@ function TreinoCard({ treino, letra, proximaOrdem, biblioteca, cats, catsTreino,
   }
 
   async function remover(it) {
+    if (!(await confirmar({ titulo: `Remover ${it.exercicios?.nome || 'este exercício'}?`, texto: `Sai de ${treino.nome}, com todos os tipos de série. O histórico de cargas da aluna é mantido.`, acao: 'Remover', perigo: true }))) return
     await supabase.from('treino_exercicios').delete().eq('id', it.id)
     onChange()
   }
@@ -245,18 +273,20 @@ function TreinoCard({ treino, letra, proximaOrdem, biblioteca, cats, catsTreino,
 
   async function renomear(e) {
     const nome = e.target.value.trim()
-    if (nome && nome !== treino.nome) await supabase.from('treinos').update({ nome }).eq('id', treino.id)
+    if (nome && nome !== treino.nome) {
+      salvoNome.rodar(async () => { const { error } = await supabase.from('treinos').update({ nome }).eq('id', treino.id); return error ? mensagemErro(error) : '' })
+    }
   }
 
   async function excluirTreino() {
-    if (!window.confirm(`Excluir "${treino.nome}" e seus exercícios? O histórico de cargas da aluna é mantido.`)) return
+    if (!(await confirmar({ titulo: `Excluir ${treino.nome}?`, texto: 'O treino e os exercícios dele saem da ficha. O histórico de cargas da aluna é mantido.', acao: 'Excluir treino', perigo: true }))) return
     await supabase.from('treinos').delete().eq('id', treino.id)
     onChange()
   }
 
   async function salvarModelo() {
     if (!items.length) return setMsg('Adicione exercícios antes de salvar como modelo.')
-    const nome = window.prompt('Nome do modelo:', treino.nome)
+    const nome = await pedirTexto({ titulo: 'Salvar como modelo', texto: 'O modelo fica na biblioteca de Modelos de treino, para usar em outras fichas.', rotulo: 'Nome do modelo', valor: treino.nome, acao: 'Salvar modelo' })
     if (!nome) return
     const { data, error } = await supabase.from('modelos').insert({ nome }).select().single()
     if (error) return setMsg(mensagemErro(error))
@@ -287,7 +317,7 @@ function TreinoCard({ treino, letra, proximaOrdem, biblioteca, cats, catsTreino,
   }
 
   async function excluirModelo(m) {
-    if (!window.confirm(`Excluir o modelo "${m.nome}"?`)) return
+    if (!(await confirmar({ titulo: `Excluir o modelo ${m.nome}?`, texto: 'As fichas que já receberam este modelo não mudam.', acao: 'Excluir', perigo: true }))) return
     await supabase.from('modelos').delete().eq('id', m.id)
     abrirModelos()
   }
@@ -318,10 +348,13 @@ function TreinoCard({ treino, letra, proximaOrdem, biblioteca, cats, catsTreino,
         </button>
         <span className="treino-letra" aria-hidden="true">{letra}</span>
         <input className="treino-nome" defaultValue={treino.nome} onBlur={renomear} aria-label="Nome do treino" />
+        <StatusSalvo s={salvoNome} />
         <span className="treino-contagem">{items.length} {items.length === 1 ? 'exercício' : 'exercícios'}</span>
         <div className="treino-cab-acoes">
-          <button className="mini" onClick={duplicarTreino}>Duplicar treino</button>
-          <button className="mini" onClick={excluirTreino}>Excluir treino</button>
+          <Menu rotulo={`Mais ações para ${treino.nome}`} itens={[
+            { rotulo: 'Duplicar treino', onClick: duplicarTreino },
+            { rotulo: 'Excluir treino', onClick: excluirTreino, perigo: true },
+          ]} />
         </div>
       </div>
 
@@ -401,7 +434,7 @@ function TreinoCard({ treino, letra, proximaOrdem, biblioteca, cats, catsTreino,
           {modelos.map(m => (
             <div key={m.id} className="topo">
               <span onClick={() => usarModelo(m)}><strong>{m.nome}</strong> <span className="muted">(toque para inserir)</span></span>
-              <button className="mini" onClick={() => excluirModelo(m)}>✕</button>
+              <button className="mini icone perigo" onClick={() => excluirModelo(m)} aria-label={`Excluir o modelo ${m.nome}`} title="Excluir modelo"><Icone nome="x" tam={16} /></button>
             </div>
           ))}
         </div>
@@ -464,7 +497,7 @@ export default function Editor({ ficha, onVoltar }) {
 
   return (
     <>
-      <button className="btn sec" onClick={onVoltar}>← Voltar às fichas</button>
+      <Voltar onClick={onVoltar} rotulo="Fichas" />
       <h3>{ficha.nome}</h3>
       {legado && <p className="erro">Para usar tipos de série (aquecimento, backoff, dropset e outros), rode a migração da Etapa 7.1 no Supabase.</p>}
       {msg && <p className="erro">{msg}</p>}

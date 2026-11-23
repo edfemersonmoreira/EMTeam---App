@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 import { mensagemErro } from './erros'
 import Icone from './Icone'
+import Voltar from './Voltar'
+import { useDialogo } from './Dialogo'
 import { hojeLocal } from './alongUtil'
 import { PSE_ROTULOS, rotuloPse, fmtRelogio, fmtDuracao, decorrido, pausar, retomar, finalizar, ativo, pendente } from './aerobicoUtil'
 import './aerobico.css'
@@ -17,6 +19,7 @@ export default function AerobicoAluna({ perfil, onVoltar }) {
   const [form, setForm] = useState({ pse: null, modalidade: '', obs: '' })
   const [msg, setMsg] = useState('')
   const [salvando, setSalvando] = useState(false)
+  const { confirmar } = useDialogo()
   const offset = useRef(0)                       // diferença entre a hora do servidor e a do celular
   const agoraMs = () => Date.now() + offset.current
 
@@ -72,7 +75,7 @@ export default function AerobicoAluna({ perfil, onVoltar }) {
   const alternarPausa = reg => atualizar(reg, reg.status === 'pausada' ? retomar(reg, agoraMs()) : pausar(reg, agoraMs()))
 
   async function terminar(reg) {
-    if (!window.confirm('Finalizar a atividade agora?')) return
+    if (!(await confirmar({ titulo: 'Finalizar a atividade agora?', texto: 'O cronômetro para e você informa como foi o esforço.', acao: 'Finalizar' }))) return
     const r = await atualizar(reg, finalizar(reg, agoraMs()))
     if (r) setForm({ pse: null, modalidade: reg.modalidade, obs: '' })
   }
@@ -86,7 +89,7 @@ export default function AerobicoAluna({ perfil, onVoltar }) {
   }
 
   async function descartar(reg) {
-    if (!window.confirm('Descartar esta atividade? Ela não será salva.')) return
+    if (!(await confirmar({ titulo: 'Descartar esta atividade?', texto: 'Ela não será salva.', acao: 'Descartar', perigo: true }))) return
     const { error } = await supabase.from('aerobico_registros').delete().eq('id', reg.id)
     if (error) return setMsg(mensagemErro(error))
     setRegs(rs => rs.filter(x => x.id !== reg.id)); setMsg('')
@@ -95,7 +98,7 @@ export default function AerobicoAluna({ perfil, onVoltar }) {
   if (!presc) {
     return (
       <>
-        <button className="btn sec" onClick={onVoltar}>← Voltar</button>
+        <Voltar soIcone onClick={onVoltar} />
         {msg ? <p className="erro">{msg}</p> : <p className="muted">Carregando…</p>}
       </>
     )
@@ -105,7 +108,7 @@ export default function AerobicoAluna({ perfil, onVoltar }) {
   const prescAtual = atual ? presc.find(p => p.id === atual.prescricao_id) : null
   const cab = (
     <div className="topo-exec">
-      <button className="icone-btn" onClick={onVoltar} aria-label="Voltar"><Icone nome="voltar" /></button>
+      <Voltar soIcone onClick={onVoltar} />
       <div className="grow"><h2 style={{ margin: 0 }}>Aeróbico</h2><div className="muted">Separado do treino de musculação</div></div>
     </div>
   )

@@ -23,11 +23,12 @@
 .item-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .ex-rotulo { flex: none; min-width: 34px; padding: 3px 8px; border-radius: var(--r-sm); border: 1px solid rgb(var(--acento-rgb) / .45); background: rgb(var(--acento-rgb) / .12); color: var(--verde2); font-size: var(--t-xs); font-weight: 800; text-align: center; }
 .item-nome { flex: 1 1 120px; min-width: 0; font-size: var(--t-base); font-weight: 800; }
-.item-acoes { display: flex; gap: 6px; margin-left: auto; }
+.item-acoes { display: flex; align-items: center; gap: 6px; margin-left: auto; }
 
 /* Telas estreitas: ações do dia e do exercício passam para a linha de baixo, sem estourar a largura */
 @media (max-width: 480px) {
-  .treino-cab-acoes, .item-acoes { width: 100%; margin-left: 0; }
-  .treino-cab-acoes .mini, .item-acoes .mini { flex: 1; }
+  .treino-cab-acoes, .item-acoes { width: 100%; margin-left: 0; justify-content: flex-end; align-items: center; }
+  .treino-cab-acoes .mini:not(.icone), .item-acoes .mini:not(.icone) { flex: 1; }
+  .item-acoes .status-salvo { margin-right: auto; }
   .treino-corpo { padding: 12px; }
 }
