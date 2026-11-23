@@ -47,10 +47,6 @@ function Prescricao({ p, onMudou, onErro }) {
   const set = c => e => setV({ ...v, [c]: e.target.value })
   return (
     <div className={'card' + (p.ativa ? '' : ' off')}>
-      <div className="topo" style={{ marginBottom: 6 }}>
-        <span className="row" style={{ margin: 0 }}>{!p.ativa && <Etiqueta>Desativada</Etiqueta>}</span>
-        <StatusSalvo s={salvo} />
-      </div>
       <div className="grid3">
         <label>Modalidade<input list="modalidades-aero" value={v.modalidade} onChange={set('modalidade')} onBlur={() => salvar()} /></label>
         <label>Tempo (min)<input type="number" min="1" value={v.tempo_previsto_min} onChange={set('tempo_previsto_min')} onBlur={() => salvar()} /></label>
@@ -70,6 +66,7 @@ function Prescricao({ p, onMudou, onErro }) {
       <div className="row">
         <button className="btn sec sm" onClick={alternar}>{p.ativa ? 'Desativar' : 'Reativar'}</button>
         <button className="btn fantasma sm" onClick={excluir}><Icone nome="lixeira" tam={16} />Excluir</button>
+        <span className="row" style={{ margin: '0 0 0 auto' }}>{!p.ativa && <Etiqueta>Desativada</Etiqueta>}<StatusSalvo s={salvo} /></span>
       </div>
     </div>
   )
