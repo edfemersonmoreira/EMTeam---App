@@ -10,8 +10,10 @@ const P = {
   chevron: <path d="M9 5l7 7-7 7" />,
   voltar: <path d="M19 12H5M11 6l-6 6 6 6" />,
   mais: <path d="M12 5v14M5 12h14" />,
-  superior: <path d="M8.5 4L4 7l2 3.5 2-1V20h8V9.5l2 1L20 7l-4.5-3c-.4 1.6-1.9 2.5-3.5 2.5S8.9 5.6 8.5 4z" />,
-  inferior: <path d="M6 4h12l1.5 15.5h-5.2L12 11.5l-2.3 8H4.5z" />,
+  // Treino de superiores: braço flexionado, com o bíceps discretamente marcado
+  superior: <><path d="M3 20h10.5c3.9 0 6.5-2.5 6.5-6.2V9c0-2.2-1.5-4-3.6-4h-1.2C14 5 13 6 13 7.2v.9c0 1.1.9 1.9 2 1.9h.5v2.6c-1-1.6-2.9-2.8-5.3-2.8-2.9 0-5.4 1.2-7.2 3.2V20z" /><path d="M8.6 15c1.4-.9 3.2-1 4.7-.2" /></>,
+  // Treino de inferiores: perna de perfil (coxa, joelho, panturrilha), com o quadríceps discretamente marcado
+  inferior: <><path d="M5.5 4.4L15.3 3c1.6 3 1.5 5.8 0 8.3-.4.7-.4 1.3-.2 1.9l.5 5.2c1.4.4 2.9.9 4 1.6.6.4.3 1.2-.4 1.2h-6.6c-.6 0-1-.5-.8-1.1.2-.7.2-1.4-.2-2-1.4-1.6-2-3.3-1.5-4.9.2-.7.5-1.2.5-1.9C8.7 9.6 6.3 7.5 5.5 4.4z" /><path d="M12.7 5.6c.8 1.5.8 3.3.1 4.9" /></>,
   coracao: <path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0112 7.3a4.3 4.3 0 017.5 2.5C19.5 15.4 12 20 12 20z" />,
   modelos: <><rect x="4" y="3.5" width="13" height="17" rx="2" /><path d="M8 8h5M8 12h5M8 16h3M20 7v12.5a1 1 0 01-1 1h-1.5" /></>,
   sino: <path d="M6 9a6 6 0 0112 0c0 5 2 6.5 2 6.5H4S6 14 6 9zM10 19a2 2 0 004 0" />,
