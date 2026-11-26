@@ -18,7 +18,7 @@ export function useDialogo() {
 }
 
 export function DialogoProvider({ children }) {
-  const [atual, setAtual] = useState(null)   // { tipo, titulo, texto, acao, perigo, valor, rotulo, resolver }
+  const [atual, setAtual] = useState(null)   // { tipo, titulo, texto, acao, cancelar, perigo, valor, rotulo, resolver }
   const abrir = useCallback((tipo, opcoes) => new Promise(resolver => setAtual({ tipo, ...opcoes, resolver })), [])
   const confirmar = useCallback(o => abrir('confirmar', o), [abrir])
   const pedirTexto = useCallback(o => abrir('texto', o), [abrir])
@@ -61,7 +61,7 @@ function Janela({ d, onFechar }) {
           </label>
         )}
         <div className="dialogo-acoes">
-          <button type="button" ref={cancelar} className="btn sec sm" onClick={() => onFechar(cancelado)}>Cancelar</button>
+          <button type="button" ref={cancelar} className="btn sec sm" onClick={() => onFechar(cancelado)}>{d.cancelar || 'Cancelar'}</button>
           <button className={'btn sm' + (d.perigo ? ' perigo' : '')}>{d.acao || (d.tipo === 'texto' ? 'Salvar' : 'Confirmar')}</button>
         </div>
       </form>

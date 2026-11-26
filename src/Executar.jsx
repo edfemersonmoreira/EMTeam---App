@@ -8,6 +8,7 @@ import './aluna.css'
 import ResumoTreino from './Resumo'
 import Etiqueta from './Etiqueta'
 import { unidades, rodadas, descansoDaRodada } from './bisetUtil'
+import { useDialogo } from './Dialogo'
 
 const fmtT = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 const primeiroNumero = t => { const m = String(t || '').match(/\d+/); return m ? m[0] : '' }
@@ -36,6 +37,8 @@ export default function Executar({ treino, perfil, onSair }) {
   const [msg, setMsg] = useState('')
   const [histEx, setHistEx] = useState(null)
   const legado = useRef(false)   // true quando o banco ainda não tem a migração da Etapa 7.1
+  const fila = useRef({})   // salvamentos de cada série, um depois do outro (o último toque sempre prevalece)
+  const { confirmar } = useDialogo()
 
   useEffect(() => {
     (async () => {
@@ -108,9 +111,18 @@ export default function Executar({ treino, perfil, onSair }) {
     setReg(r => ({ ...r, [chave(ex, slot)]: { ...valor(ex, slot), [campo]: val } }))
   }
 
-  async function salvar(ex, slot, novo = {}) {
+  // Ao digitar e tocar no ✓ em seguida, saem dois salvamentos quase juntos (o do campo e o do ✓).
+  // A fila garante que cheguem ao banco na ordem em que aconteceram, para a série não ficar como "não concluída".
+  function salvar(ex, slot, novo = {}) {
     const atual = { ...valor(ex, slot), ...novo }
-    setReg(r => ({ ...r, [chave(ex, slot)]: atual }))
+    const k = chave(ex, slot)
+    setReg(r => ({ ...r, [k]: atual }))
+    const p = (fila.current[k] || Promise.resolve()).then(() => gravar(ex, slot, atual))
+    fila.current[k] = p.catch(() => {})
+    return p
+  }
+
+  async function gravar(ex, slot, atual) {
     const c = parseFloat(String(atual.carga).replace(',', '.'))
     const rp = parseInt(atual.reps, 10)
     const base = {
@@ -124,6 +136,26 @@ export default function Executar({ treino, perfil, onSair }) {
       ;({ error } = await supabase.from('registros_series').upsert(base, { onConflict: 'sessao_id,exercicio_id,numero_serie' }))
     }
     setMsg(error ? mensagemErro(error) : '')
+  }
+
+  // Séries com carga ou repetições digitadas, mas sem o ✓: não iniciam o descanso nem entram no resumo.
+  function pendentes(lista) {
+    return lista.flatMap(ex => ex.slots.filter(slot => {
+      const k = chave(ex, slot), r = reg[k]
+      return tocados[k] && r && !r.concluida && (String(r.carga ?? '') !== '' || String(r.reps ?? '') !== '')
+    }).map(slot => [ex, slot]))
+  }
+
+  // Antes de avançar ou finalizar, pergunta se as séries preenchidas sem ✓ foram feitas.
+  async function conferirPendentes(lista) {
+    const p = pendentes(lista)
+    if (!p.length) return
+    const ok = await confirmar({
+      titulo: p.length === 1 ? 'Marcar 1 série como feita?' : `Marcar ${p.length} séries como feitas?`,
+      texto: 'Você preencheu carga ou repetições, mas não tocou em ✓. Séries sem ✓ não entram no seu resumo nem no histórico.',
+      acao: 'Marcar como feitas', cancelar: 'Deixar como está',
+    })
+    if (ok) await Promise.all(p.map(([ex, slot]) => salvar(ex, slot, { concluida: true })))
   }
 
   function alternar(ex, slot, ultimaDoTreino) {
@@ -223,8 +255,8 @@ export default function Executar({ treino, perfil, onSair }) {
     <div className="acoes-exec">
       {extra}
       {!ehUltimo
-        ? <button className="btn" onClick={() => setIdx(idx + 1)}>Próximo exercício<Icone nome="chevron" tam={16} /></button>
-        : <button className="btn" onClick={() => setFim({ cansaco: 0, obs: '' })}>Finalizar treino</button>}
+        ? <button className="btn" onClick={async () => { await conferirPendentes(us[idx].itens); setIdx(idx + 1) }}>Próximo exercício<Icone nome="chevron" tam={16} /></button>
+        : <button className="btn" onClick={async () => { await conferirPendentes(itens); setFim({ cansaco: 0, obs: '' }) }}>Finalizar treino</button>}
     </div>
   )
 
@@ -468,7 +500,7 @@ export default function Executar({ treino, perfil, onSair }) {
           )
         })}
       </div>
-      <button className="btn" style={{ width: '100%', marginTop: 16 }} onClick={() => setFim({ cansaco: 0, obs: '' })}>Finalizar treino</button>
+      <button className="btn" style={{ width: '100%', marginTop: 16 }} onClick={async () => { await conferirPendentes(itens); setFim({ cansaco: 0, obs: '' }) }}>Finalizar treino</button>
       {barra}
     </main>
   )
