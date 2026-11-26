@@ -6,6 +6,9 @@ import Icone from './Icone'
 import Menu from './Menu'
 import Voltar from './Voltar'
 import { CabecalhoPagina } from './Cabecalho'
+import CampoOrientacoes from './Orientacoes'
+import Etiqueta from './Etiqueta'
+import { unidades, moverUnidade, podeFazerBiset, novoGrupo } from './bisetUtil'
 import { useDialogo } from './Dialogo'
 import { useSalvamento, StatusSalvo } from './Salvamento'
 import { inserirExercicios, linhasDoModelo } from './prescricao'
@@ -116,7 +119,7 @@ export function Bloco({ b, i, total, cats, onSalvar, onMove, onRemove, onErro, o
 }
 
 // Exercício dentro do treino: vários tipos de série (blocos) + observação geral
-function Item({ it, i, total, rotulo, cats, onMove, onRemove, onDuplicar, onChange, onErro, onGerenciar }) {
+function Item({ it, i, rotulo, cats, onMove, onRemove, onDuplicar, onChange, onErro, onGerenciar, podeSubir, podeDescer, biset, podeBiset, onBiset, onDesfazerBiset, onTrocarBiset }) {
   const blocos = blocosOrdenados(it)
   const legado = !it.blocos
   const [obs, setObs] = useState(it.observacao ?? '')
@@ -185,15 +188,20 @@ function Item({ it, i, total, rotulo, cats, onMove, onRemove, onDuplicar, onChan
         <strong className="item-nome">{it.exercicios?.nome}</strong>
         <div className="item-acoes">
           <StatusSalvo s={salvo} />
-          <button className="mini icone" disabled={i === 0} onClick={() => onMove(i, -1)} aria-label={`Subir ${nome}`} title="Subir"><Icone nome="cima" tam={16} /></button>
-          <button className="mini icone" disabled={i === total - 1} onClick={() => onMove(i, 1)} aria-label={`Descer ${nome}`} title="Descer"><Icone nome="baixo" tam={16} /></button>
+          <button className="mini icone" disabled={!podeSubir} onClick={() => onMove(i, -1)} aria-label={biset ? `Subir o bi-set com ${nome}` : `Subir ${nome}`} title="Subir"><Icone nome="cima" tam={16} /></button>
+          <button className="mini icone" disabled={!podeDescer} onClick={() => onMove(i, 1)} aria-label={biset ? `Descer o bi-set com ${nome}` : `Descer ${nome}`} title="Descer"><Icone nome="baixo" tam={16} /></button>
           <Menu rotulo={`Mais ações para ${nome}`} itens={[
+            { rotulo: 'Fazer bi-set com o próximo exercício', onClick: () => onBiset(i), oculto: !podeBiset },
+            { rotulo: 'Trocar a ordem do bi-set', onClick: () => onTrocarBiset(it), oculto: !biset },
+            { rotulo: 'Desfazer bi-set', onClick: () => onDesfazerBiset(it), oculto: !biset },
             { rotulo: 'Duplicar exercício', onClick: () => onDuplicar(it, i) },
             { rotulo: 'Remover exercício', onClick: () => onRemove(it), perigo: true },
           ]} />
         </div>
       </div>
 
+      {biset === 'primeiro' && <p className="biset-nota">Sem intervalo depois deste: a aluna segue direto para o próximo exercício.</p>}
+      {biset === 'segundo' && <p className="biset-nota">O descanso deste exercício vale para o bi-set inteiro.</p>}
       {legado ? (
         <div className="grid3">
           <label>Séries<input type="number" min="1" value={v.series} onChange={e => setV({ ...v, series: e.target.value })} onBlur={salvarLegado} /></label>
@@ -207,6 +215,8 @@ function Item({ it, i, total, rotulo, cats, onMove, onRemove, onDuplicar, onChan
           ))}
         </>
       )}
+      <CampoOrientacoes valor={it.orientacoes} daBiblioteca={it.exercicios?.orientacoes} nome={nome}
+        salvar={async novo => { const erro = await salvo.rodar(async () => erroDe(await supabase.from('treino_exercicios').update({ orientacoes: novo }).eq('id', it.id))); if (!erro) onChange(); return erro }} />
       {comObs && <input className="item-obs" placeholder="Observação geral do exercício (opcional)" aria-label={`Observação geral de ${nome}`} value={obs} onChange={e => setObs(e.target.value)} onBlur={salvarObs} autoFocus={!it.observacao} />}
       <div className="item-rodape">
         {!legado && <button type="button" className="mini" onClick={addBloco}><Icone nome="mais" tam={14} /> Tipo de série</button>}
@@ -237,33 +247,66 @@ function TreinoCard({ treino, letra, proximaOrdem, biblioteca, cats, catsTreino,
     setMsg(''); setModo(null); setPrevia(null); setTexto(''); onChange()
   }
 
+  // Um bi-set se move inteiro: as setas trocam a unidade (exercício simples ou par) de lugar com a vizinha.
+  const salvarOrdem = arr => Promise.all(arr.map((x, idx) => (x.ordem !== idx ? supabase.from('treino_exercicios').update({ ordem: idx }).eq('id', x.id) : null)))
   async function mover(i, d) {
-    const arr = [...items]; const j = i + d
-    if (j < 0 || j >= arr.length) return
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
-    await Promise.all(arr.map((x, idx) => supabase.from('treino_exercicios').update({ ordem: idx }).eq('id', x.id)))
+    const arr = moverUnidade(items, i, d)
+    if (arr === items) return
+    await salvarOrdem(arr)
     onChange()
   }
 
+  const parDe = it => (it.biset_grupo ? items.find(x => x.biset_grupo === it.biset_grupo && x.id !== it.id) : null)
+
   async function remover(it) {
-    if (!(await confirmar({ titulo: `Remover ${it.exercicios?.nome || 'este exercício'}?`, texto: `Sai de ${treino.nome}, com todos os tipos de série. O histórico de cargas da aluna é mantido.`, acao: 'Remover', perigo: true }))) return
+    const par = parDe(it)
+    const texto = `Sai de ${treino.nome}, com todos os tipos de série.${par ? ` O bi-set com ${par.exercicios?.nome || 'o outro exercício'} é desfeito.` : ''} O histórico de cargas da aluna é mantido.`
+    if (!(await confirmar({ titulo: `Remover ${it.exercicios?.nome || 'este exercício'}?`, texto, acao: 'Remover', perigo: true }))) return
     await supabase.from('treino_exercicios').delete().eq('id', it.id)
+    if (par) await supabase.from('treino_exercicios').update({ biset_grupo: null }).eq('id', par.id)
     onChange()
+  }
+
+  // Bi-set: liga o exercício ao próximo (mesmo grupo nos dois), desfaz ou troca a ordem dos dois.
+  async function fazerBiset(i) {
+    if (!podeFazerBiset(items, i)) return
+    const g = novoGrupo()
+    const r = await Promise.all([items[i], items[i + 1]].map(x => supabase.from('treino_exercicios').update({ biset_grupo: g }).eq('id', x.id)))
+    const falha = r.find(x => x.error)
+    if (falha) return setMsg(mensagemErro(falha.error))
+    setMsg(''); onChange()
+  }
+  async function desfazerBiset(it) {
+    const { error } = await supabase.from('treino_exercicios').update({ biset_grupo: null }).eq('treino_id', treino.id).eq('biset_grupo', it.biset_grupo)
+    if (error) return setMsg(mensagemErro(error))
+    setMsg(''); onChange()
+  }
+  async function trocarBiset(it) {
+    const par = parDe(it)
+    if (!par) return
+    const r = await Promise.all([supabase.from('treino_exercicios').update({ ordem: par.ordem }).eq('id', it.id), supabase.from('treino_exercicios').update({ ordem: it.ordem }).eq('id', par.id)])
+    const falha = r.find(x => x.error)
+    if (falha) return setMsg(mensagemErro(falha.error))
+    setMsg(''); onChange()
   }
 
   // Linhas (com tipos de série) de um ou mais exercícios do treino, prontas para inserirExercicios
   const linhaDe = x => ({
     exercicio_id: x.exercicio_id, series: x.series, repeticoes: x.repeticoes, descanso_seg: x.descanso_seg, observacao: x.observacao,
+    biset_grupo: x.biset_grupo || null, orientacoes: x.orientacoes ?? null,
     blocos: blocosOrdenados(x).map(b => ({ categoria_id: b.categoria_id, series: b.series, repeticoes: b.repeticoes, carga: b.carga, descanso_seg: b.descanso_seg, observacao: b.observacao })),
   })
 
   // Duplica o exercício logo abaixo dele, com todos os tipos de série. Só cria registros novos: o histórico de cargas não é tocado.
-  async function duplicarExercicio(it, pos) {
+  // Num bi-set, a cópia entra depois do par (e sai como exercício simples), para não separar os dois.
+  async function duplicarExercicio(it, i) {
+    const u = unidades(items).find(x => i >= x.inicio && i < x.inicio + x.itens.length)
+    const pos = u ? u.inicio + u.itens.length - 1 : i
     const depois = items.slice(pos + 1)
     const r = await Promise.all(depois.map((x, k) => supabase.from('treino_exercicios').update({ ordem: pos + 2 + k }).eq('id', x.id)))
     const falha = r.find(x => x.error)
     if (falha) return setMsg(mensagemErro(falha.error))
-    const erro = await inserirExercicios(treino.id, pos + 1, [linhaDe(it)], cats)
+    const erro = await inserirExercicios(treino.id, pos + 1, [{ ...linhaDe(it), biset_grupo: null }], cats)
     if (erro) return setMsg(mensagemErro(erro))
     setMsg(''); onChange()
   }
@@ -305,6 +348,7 @@ function TreinoCard({ treino, letra, proximaOrdem, biblioteca, cats, catsTreino,
       const l = {
         modelo_id: data.id, exercicio_id: x.exercicio_id, ordem: k, series: x.series,
         repeticoes: x.repeticoes, descanso_seg: x.descanso_seg, observacao: x.observacao,
+        biset_grupo: x.biset_grupo || null, orientacoes: x.orientacoes ?? null,
       }
       if (x.blocos) l.blocos = blocosOrdenados(x).map(b => ({
         categoria_id: b.categoria_id, series: b.series, repeticoes: b.repeticoes, carga: b.carga, descanso_seg: b.descanso_seg, observacao: b.observacao,
@@ -390,10 +434,22 @@ function TreinoCard({ treino, letra, proximaOrdem, biblioteca, cats, catsTreino,
         ))}
       </div>
 
-      {items.map((it, i) => (
-        <Item key={it.id} it={it} i={i} total={items.length} rotulo={`${letra}${i + 1}`} cats={cats} onMove={mover} onRemove={remover} onDuplicar={duplicarExercicio}
-          onChange={onChange} onErro={setMsg} onGerenciar={onGerenciar} />
-      ))}
+      {(() => {
+        const us = unidades(items)
+        const item = (it, i, u, k, pos) => (
+          <Item key={it.id} it={it} i={i} rotulo={`${letra}${i + 1}`} cats={cats} onMove={mover} onRemove={remover} onDuplicar={duplicarExercicio}
+            onChange={onChange} onErro={setMsg} onGerenciar={onGerenciar}
+            podeSubir={k > 0} podeDescer={k < us.length - 1}
+            biset={u.tipo === 'biset' ? (pos === 0 ? 'primeiro' : 'segundo') : null}
+            podeBiset={podeFazerBiset(items, i)} onBiset={fazerBiset} onDesfazerBiset={desfazerBiset} onTrocarBiset={trocarBiset} />
+        )
+        return us.map((u, k) => u.tipo === 'biset' ? (
+          <div key={u.grupo} className="biset-grupo" role="group" aria-label={`Bi-set: ${u.itens.map(x => x.exercicios?.nome).join(' e ')}`}>
+            <div className="biset-cab"><Etiqueta tipo="destaque">Bi-set</Etiqueta><span className="muted pequeno">Os dois em sequência, sem intervalo entre eles</span></div>
+            {u.itens.map((it, pos) => item(it, u.inicio + pos, u, k, pos))}
+          </div>
+        ) : item(u.itens[0], u.inicio, u, k, 0))
+      })()}
       {items.length === 0 && <p className="muted">Nenhum exercício neste treino ainda.</p>}
 
       <div className="row wrap treino-acoes">
@@ -473,10 +529,10 @@ export default function Editor({ ficha, onVoltar, trilha }) {
 
   async function carregar() {
     let r = await supabase.from('treinos')
-      .select('*, treino_exercicios(*, exercicios(nome, grupo_muscular), blocos:treino_exercicio_series(*))')
+      .select('*, treino_exercicios(*, exercicios(nome, grupo_muscular, orientacoes), blocos:treino_exercicio_series(*))')
       .eq('ficha_id', ficha.id).order('ordem')
     if (r.error) {   // banco ainda sem a migração da Etapa 7.1: mantém o editor simples
-      r = await supabase.from('treinos').select('*, treino_exercicios(*, exercicios(nome, grupo_muscular))')
+      r = await supabase.from('treinos').select('*, treino_exercicios(*, exercicios(nome, grupo_muscular, orientacoes))')
         .eq('ficha_id', ficha.id).order('ordem')
       setLegado(true)
     } else setLegado(false)

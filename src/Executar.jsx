@@ -6,12 +6,18 @@ import Icone from './Icone'
 import { blocosDoExercicio, expandir, chaveUltimo, resumo } from './seriesUtil'
 import './aluna.css'
 import ResumoTreino from './Resumo'
+import Etiqueta from './Etiqueta'
+import { unidades, rodadas, descansoDaRodada } from './bisetUtil'
 
 const fmtT = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 const primeiroNumero = t => { const m = String(t || '').match(/\d+/); return m ? m[0] : '' }
 const numeroDe = t => { const m = String(t || '').match(/\d+(?:[.,]\d+)?/); return m ? m[0] : '' }
 const chave = (ex, slot) => `${ex.exercicio_id}:${slot.numero}`
 const principalDe = ex => ex.blocos.find(b => b.categorias_serie && b.categorias_serie.principal) || ex.blocos[0]
+// Orientações que a aluna vê: as próprias do treino; em treinos antigos (campo vazio no banco), as da biblioteca.
+const orientDe = ex => (ex.orientacoes != null ? ex.orientacoes : (ex.exercicios ? ex.exercicios.orientacoes : null))
+const nomeDe = ex => (ex.exercicios ? ex.exercicios.nome : '')
+const prescricaoDe = ex => ex.blocos.map(b => `${b.categorias_serie.nome} ${b.series}×${b.repeticoes || '–'}${b.carga ? ` (${b.carga})` : ''}`).join(' · ')
 
 export default function Executar({ treino, perfil, onSair }) {
   const [itens, setItens] = useState([])
@@ -129,6 +135,18 @@ export default function Executar({ treino, perfil, onSair }) {
     }
   }
 
+  // Bi-set: cada série é registrada no seu exercício, como sempre. O descanso só começa quando as duas séries
+  // da rodada estiverem concluídas (o primeiro exercício não tem intervalo), com o tempo do segundo exercício.
+  function alternarNoBiset(ex, slot, r, exA, exB, fimDoTreino) {
+    const concl = !valor(ex, slot).concluida
+    salvar(ex, slot, { concluida: concl })
+    if (!concl) return
+    const outro = ex === exA ? (r.b ? [exB, r.b] : null) : (r.a ? [exA, r.a] : null)
+    const outroFeito = !outro || valor(outro[0], outro[1]).concluida
+    const desc = descansoDaRodada(r)
+    if (outroFeito && desc && !fimDoTreino) { setAte(Date.now() + desc * 1000); setAgora(Date.now()) }
+  }
+
   // Histórico de cargas dentro do exercício: somente séries principais
   async function abrirHist(ex) {
     if (histEx && histEx.id === ex.exercicio_id) return setHistEx(null)
@@ -159,6 +177,7 @@ export default function Executar({ treino, perfil, onSair }) {
   }
 
   if (carregando) return <p className="center">Carregando treino…</p>
+  const us = unidades(itens)   // exercício simples ou bi-set (par); a navegação anda de unidade em unidade
 
   const restante = ate ? Math.max(0, Math.ceil((ate - agora) / 1000)) : 0
   const barra = ate && (
@@ -168,6 +187,44 @@ export default function Executar({ treino, perfil, onSair }) {
         <button onClick={() => setAte(a => a + 15000)}>+15 s</button>
         <button onClick={() => setAte(null)}>Pular</button>
       </div>
+    </div>
+  )
+
+  const tabelaHist = ex => histEx && histEx.id === ex.exercicio_id && (
+    <div className="card">
+      {histEx.dias.length === 0
+        ? <p className="muted" style={{ margin: 0 }}>Ainda sem registros principais deste exercício.</p>
+        : (
+          <table className="hist" style={{ margin: 0 }}>
+            <tbody>
+              {histEx.dias.map(d => (
+                <tr key={d.k}>
+                  <td>{new Date(d.k + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
+                  <td>{d.carga} kg</td><td>{d.reps} reps</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+    </div>
+  )
+  const topoExec = (
+    <div className="topo-exec">
+      <button className="icone-btn" onClick={() => setIdx(null)} aria-label="Voltar à lista de exercícios"><Icone nome="voltar" /></button>
+      <div className="grow">
+        <div className="muted">{treino.nome}, exercício {idx + 1} de {us.length}</div>
+        <div className="regua-prog" aria-hidden="true">
+          {us.map((_, i) => <i key={i} className={i < idx ? 'f' : i === idx ? 'a' : ''} />)}
+        </div>
+      </div>
+    </div>
+  )
+  const acoes = (ehUltimo, extra) => (
+    <div className="acoes-exec">
+      {extra}
+      {!ehUltimo
+        ? <button className="btn" onClick={() => setIdx(idx + 1)}>Próximo exercício<Icone nome="chevron" tam={16} /></button>
+        : <button className="btn" onClick={() => setFim({ cansaco: 0, obs: '' })}>Finalizar treino</button>}
     </div>
   )
 
@@ -197,29 +254,111 @@ export default function Executar({ treino, perfil, onSair }) {
     )
   }
 
+  if (idx !== null && us[idx] && us[idx].tipo === 'biset') {
+    const [a, b] = us[idx].itens
+    const rs = rodadas(a.slots, b.slots)
+    const ehUltimo = idx === us.length - 1
+    const temSugestao = [a, b].some(ex => ex.slots.some(s => !valor(ex, s).concluida && !tocados[chave(ex, s)] && (valor(ex, s).carga !== '' || valor(ex, s).reps !== '')))
+    return (
+      <main className={'exec' + (ate ? ' pad-desc' : '')}>
+        {topoExec}
+        <div className="biset-exec-cab"><Etiqueta tipo="destaque">Bi-set</Etiqueta></div>
+        <h2 className="ex-nome">{nomeDe(a)} + {nomeDe(b)}</h2>
+        <p className="biset-dica">Faça os dois em sequência, sem descanso entre eles. O descanso começa quando você concluir a série dos dois.</p>
+
+        {[a, b].map((ex, k) => {
+          const pb = principalDe(ex)
+          const u = ultimo[chaveUltimo(ex.exercicio_id, pb.categoria_id)]
+          const emb = ytEmbed(ex.exercicios ? ex.exercicios.video_url : '')
+          const orient = orientDe(ex)
+          return (
+            <section key={ex.id} className="ex-biset" aria-label={`Exercício ${k + 1} do bi-set: ${nomeDe(ex)}`}>
+              <div className="ex-biset-cab">
+                <span className="bx">{k + 1}</span>
+                <div className="grow"><strong>{nomeDe(ex)}</strong><span className="muted bl">{prescricaoDe(ex)}</span></div>
+              </div>
+              {u && <div className="ultima">Última vez: {u.carga_kg ?? '–'} kg, {u.repeticoes ?? '–'} repetições</div>}
+              {(orient || ex.observacao || emb) && (
+                <details className="como-fazer">
+                  <summary>Como fazer</summary>
+                  {orient && <p className="orient">{orient}</p>}
+                  {ex.observacao && <p className="orient"><strong>Observação:</strong> {ex.observacao}</p>}
+                  {emb && <iframe className="video" src={emb} allowFullScreen title={nomeDe(ex)} />}
+                </details>
+              )}
+              <button className="link-texto ex-biset-hist" onClick={() => abrirHist(ex)}>
+                <Icone nome="grafico" tam={16} />{histEx && histEx.id === ex.exercicio_id ? 'Ocultar histórico' : 'Histórico de cargas'}
+              </button>
+              {tabelaHist(ex)}
+            </section>
+          )
+        })}
+
+        {temSugestao && <p className="dica-sugestao">Números em cinza são da última vez. Ajuste se precisar e toque em <Icone nome="check" tam={14} /> para registrar.</p>}
+
+        <div className="rodadas">
+          {rs.map(r => {
+            const linhas = [[a, r.a, 1], [b, r.b, 2]].filter(x => x[1])
+            const completa = linhas.every(([ex, slot]) => valor(ex, slot).concluida)
+            const cats = [...new Set(linhas.map(([, slot]) => slot.bloco.categorias_serie.nome))].join(' + ')
+            return (
+              <div key={r.i} className={'rodada' + (completa ? ' completa' : '')} role="group" aria-label={`Série ${r.i + 1} do bi-set`}>
+                <div className="rodada-cab">
+                  <strong>Série {r.i + 1}</strong>
+                  <span className="muted">{cats}</span>
+                  {completa && <span className="rodada-ok"><Icone nome="check" tam={14} />Feita</span>}
+                </div>
+                {linhas.map(([ex, slot, n]) => {
+                  const v = valor(ex, slot)
+                  const sug = !v.concluida && !tocados[chave(ex, slot)] ? ' sugerido' : ''
+                  const nome = nomeDe(ex)
+                  return (
+                    <div key={n} className={'serie' + (v.concluida ? ' done' : '') + sug} style={{ '--cat': slot.bloco.categorias_serie.cor }}>
+                      <span className="bx pequena" title={nome}>{n}</span>
+                      <label className="campo">
+                        <input inputMode="decimal" placeholder={numeroDe(slot.bloco.carga) || '0'} value={v.carga} aria-label={`Carga de ${nome}, série ${r.i + 1}`}
+                          onChange={e => editar(ex, slot, 'carga', e.target.value)} onBlur={() => salvar(ex, slot)} />
+                        <span className="un">kg</span>
+                      </label>
+                      <label className="campo">
+                        <input inputMode="numeric" placeholder={primeiroNumero(slot.bloco.repeticoes)} value={v.reps} aria-label={`Repetições de ${nome}, série ${r.i + 1}`}
+                          onChange={e => editar(ex, slot, 'reps', e.target.value)} onBlur={() => salvar(ex, slot)} />
+                        <span className="un">reps</span>
+                      </label>
+                      <button className={'chk' + (v.concluida ? ' on' : '')} aria-pressed={v.concluida}
+                        aria-label={`Concluir série ${r.i + 1} de ${nome}`}
+                        onClick={() => alternarNoBiset(ex, slot, r, a, b, ehUltimo && r.i === rs.length - 1)}>
+                        <Icone nome="check" tam={22} />
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })}
+        </div>
+        {msg && <p className="erro">{msg}</p>}
+        {acoes(ehUltimo)}
+        {barra}
+      </main>
+    )
+  }
+
   if (idx !== null) {
-    const ex = itens[idx]
+    const ex = us[idx].itens[0]
     const emb = ytEmbed(ex.exercicios ? ex.exercicios.video_url : '')
-    const ehUltimoEx = idx === itens.length - 1
+    const ehUltimoEx = idx === us.length - 1
     const nome = ex.exercicios ? ex.exercicios.nome : ''
     const pb = principalDe(ex)
     const u = ultimo[chaveUltimo(ex.exercicio_id, pb.categoria_id)]
     return (
       <main className={'exec' + (ate ? ' pad-desc' : '')}>
-        <div className="topo-exec">
-          <button className="icone-btn" onClick={() => setIdx(null)} aria-label="Voltar à lista de exercícios"><Icone nome="voltar" /></button>
-          <div className="grow">
-            <div className="muted">{treino.nome}, exercício {idx + 1} de {itens.length}</div>
-            <div className="regua-prog" aria-hidden="true">
-              {itens.map((_, i) => <i key={i} className={i < idx ? 'f' : i === idx ? 'a' : ''} />)}
-            </div>
-          </div>
-        </div>
+        {topoExec}
 
         {emb && <iframe className="video" src={emb} allowFullScreen title={nome} />}
         <h2 className="ex-nome">{nome}</h2>
         {u && <div className="ultima">Última vez ({pb.categorias_serie.nome.toLowerCase()}): {u.carga_kg ?? '–'} kg, {u.repeticoes ?? '–'} repetições</div>}
-        {ex.exercicios && ex.exercicios.orientacoes && <p className="orient">{ex.exercicios.orientacoes}</p>}
+        {orientDe(ex) && <p className="orient">{orientDe(ex)}</p>}
         {ex.observacao && <p className="orient"><strong>Observação:</strong> {ex.observacao}</p>}
 
         {ex.slots.some(s => !valor(ex, s).concluida && !tocados[chave(ex, s)] && (valor(ex, s).carga !== '' || valor(ex, s).reps !== '')) && (
@@ -269,33 +408,13 @@ export default function Executar({ treino, perfil, onSair }) {
         })}
         {msg && <p className="erro">{msg}</p>}
 
-        {histEx && histEx.id === ex.exercicio_id && (
-          <div className="card">
-            {histEx.dias.length === 0
-              ? <p className="muted" style={{ margin: 0 }}>Ainda sem registros principais deste exercício.</p>
-              : (
-                <table className="hist" style={{ margin: 0 }}>
-                  <tbody>
-                    {histEx.dias.map(d => (
-                      <tr key={d.k}>
-                        <td>{new Date(d.k + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
-                        <td>{d.carga} kg</td><td>{d.reps} reps</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-          </div>
-        )}
+        {tabelaHist(ex)}
 
-        <div className="acoes-exec">
+        {acoes(ehUltimoEx, (
           <button className="link-texto" style={{ margin: 0 }} onClick={() => abrirHist(ex)}>
             <Icone nome="grafico" tam={18} />{histEx && histEx.id === ex.exercicio_id ? 'Ocultar histórico' : 'Histórico de cargas'}
           </button>
-          {!ehUltimoEx
-            ? <button className="btn" onClick={() => setIdx(idx + 1)}>Próximo exercício<Icone nome="chevron" tam={16} /></button>
-            : <button className="btn" onClick={() => setFim({ cansaco: 0, obs: '' })}>Finalizar treino</button>}
-        </div>
+        ))}
         {barra}
       </main>
     )
@@ -315,7 +434,25 @@ export default function Executar({ treino, perfil, onSair }) {
       {msg && <p className="erro">{msg}</p>}
       {itens.length === 0 && <p className="muted">Este treino ainda não tem exercícios.</p>}
       <div className="lista-escolha">
-        {itens.map((ex, i) => {
+        {us.map((u, i) => {
+          if (u.tipo === 'biset') {
+            const [a, b] = u.itens
+            const total = a.slots.length + b.slots.length, feitasPar = feitas(a) + feitas(b)
+            const okPar = total > 0 && feitasPar >= total
+            return (
+              <button key={u.grupo} className="linha-ex linha-biset" onClick={() => setIdx(i)}>
+                <span className={'num' + (okPar ? ' ok' : '')}>{okPar ? <Icone nome="check" tam={16} /> : i + 1}</span>
+                <span className="grow">
+                  <Etiqueta tipo="destaque">Bi-set</Etiqueta>
+                  <strong className="bl">{nomeDe(a)} + {nomeDe(b)}</strong>
+                  <span className="muted bl">Em sequência, sem descanso entre eles</span>
+                </span>
+                <span className="muted">{feitasPar}/{total}</span>
+                <Icone nome="chevron" tam={16} />
+              </button>
+            )
+          }
+          const ex = u.itens[0]
           const ok = ex.slots.length > 0 && feitas(ex) >= ex.slots.length
           return (
             <button key={ex.id} className="linha-ex" onClick={() => setIdx(i)}>

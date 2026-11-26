@@ -117,3 +117,27 @@ table.hist tr:last-child td { border-bottom: 0; }
 .chips button { flex: 1; min-height: 38px; border-radius: var(--r-pill); border: 1px solid var(--borda); background: transparent; color: var(--txt2); font-weight: 700; cursor: pointer; transition: all .16s ease; }
 .chips button:hover { color: var(--txt); }
 .chips button.on { background: rgb(var(--acento-rgb) / .16); border-color: var(--verde2); color: var(--verde2); }
+
+/* Execução de um bi-set: os dois exercícios identificados (1 e 2) e as séries organizadas em rodadas */
+.biset-exec-cab { margin-top: 14px; }
+.biset-exec-cab + .ex-nome { margin-top: 8px; }
+.biset-dica { margin: 6px 0 12px; font-size: var(--t-md); color: var(--txt2); }
+.ex-biset { margin: 10px 0; padding: 12px 14px; background: var(--card); border: 1px solid var(--borda); border-radius: var(--r-card); }
+.ex-biset-cab { display: flex; align-items: center; gap: 12px; }
+.ex-biset-cab strong { font-size: var(--t-base); }
+.ex-biset .ultima { margin-top: 8px; }
+.ex-biset .card { margin: 8px 0 0; }
+.ex-biset-hist { margin: 6px 0 0; padding: 6px 0; min-height: 36px; justify-content: flex-start; font-size: var(--t-sm); }
+.como-fazer { margin-top: 8px; }
+.como-fazer summary { cursor: pointer; font-size: var(--t-sm); font-weight: 700; color: var(--verde2); padding: 4px 0; }
+.como-fazer[open] summary { margin-bottom: 4px; }
+.bx { flex: none; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--verde); color: var(--sobre-verde); font-size: var(--t-sm); font-weight: 800; }
+.bx.pequena { width: 22px; height: 22px; font-size: var(--t-xs); }
+.rodadas { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.rodada { padding: 10px 12px 4px; border: 1px solid var(--borda); border-left: 3px solid var(--verde2); border-radius: var(--r-ctl); background: var(--bg2); }
+.rodada.completa { border-color: rgb(var(--acento-rgb) / .55); }
+.rodada-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: var(--t-md); }
+.rodada-ok { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: var(--verde2); font-size: var(--t-sm); font-weight: 700; }
+.rodada .serie { margin: 8px 0; }
+.rodada .chk.on { background: var(--cat, var(--verde2)); border-color: var(--cat, var(--verde2)); color: var(--tinta); }
+.linha-biset .etiqueta { margin-bottom: 2px; }

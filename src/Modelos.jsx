@@ -12,6 +12,9 @@ import CategoriaTreino from './CategoriaTreino'
 import { Bloco } from './Editor'
 import { inserirExercicios, linhasDoModelo } from './prescricao'
 import { mover, descreverBlocos } from './seriesUtil'
+import CampoOrientacoes from './Orientacoes'
+import Etiqueta from './Etiqueta'
+import { unidades, moverUnidade, podeFazerBiset, novoGrupo } from './bisetUtil'
 import './series.css'
 import './modelos.css'
 
@@ -43,7 +46,7 @@ function useCategorias() {
 }
 
 // ---------- Exercício dentro do modelo ----------
-function ItemModelo({ it, i, total, cats, onMove, onRemove, onErro, onGerenciar }) {
+function ItemModelo({ it, i, cats, onMove, onRemove, onErro, onGerenciar, podeSubir, podeDescer, biset, podeBiset, onBiset, onDesfazerBiset, onTrocarBiset }) {
   const principal = cats.find(c => c.principal)
   const [blocos, setBlocos] = useState(() => blocosDe(it, principal && principal.id))
   const [obs, setObs] = useState(it.observacao ?? '')
@@ -90,15 +93,24 @@ function ItemModelo({ it, i, total, cats, onMove, onRemove, onErro, onGerenciar 
         <strong>{i + 1}. {it.exercicios ? it.exercicios.nome : ''}</strong>
         <div className="row" style={{ margin: 0 }}>
           <StatusSalvo s={salvo} />
-          <button className="mini icone" disabled={i === 0} onClick={() => onMove(i, -1)} aria-label={`Subir ${nome}`} title="Subir"><Icone nome="cima" tam={16} /></button>
-          <button className="mini icone" disabled={i === total - 1} onClick={() => onMove(i, 1)} aria-label={`Descer ${nome}`} title="Descer"><Icone nome="baixo" tam={16} /></button>
-          <button className="mini icone perigo" onClick={() => onRemove(it)} aria-label={`Remover ${nome}`} title="Remover"><Icone nome="x" tam={16} /></button>
+          <button className="mini icone" disabled={!podeSubir} onClick={() => onMove(i, -1)} aria-label={biset ? `Subir o bi-set com ${nome}` : `Subir ${nome}`} title="Subir"><Icone nome="cima" tam={16} /></button>
+          <button className="mini icone" disabled={!podeDescer} onClick={() => onMove(i, 1)} aria-label={biset ? `Descer o bi-set com ${nome}` : `Descer ${nome}`} title="Descer"><Icone nome="baixo" tam={16} /></button>
+          <Menu rotulo={`Mais ações para ${nome}`} itens={[
+            { rotulo: 'Fazer bi-set com o próximo exercício', onClick: () => onBiset(i), oculto: !podeBiset },
+            { rotulo: 'Trocar a ordem do bi-set', onClick: () => onTrocarBiset(it), oculto: !biset },
+            { rotulo: 'Desfazer bi-set', onClick: () => onDesfazerBiset(it), oculto: !biset },
+            { rotulo: 'Remover exercício', onClick: () => onRemove(it), perigo: true },
+          ]} />
         </div>
       </div>
+      {biset === 'primeiro' && <p className="biset-nota">Sem intervalo depois deste: a aluna segue direto para o próximo exercício.</p>}
+      {biset === 'segundo' && <p className="biset-nota">O descanso deste exercício vale para o bi-set inteiro.</p>}
       {blocos.map((b, j) => (
         <Bloco key={b._k} b={b} i={j} total={blocos.length} cats={cats} onMove={moverBloco} onRemove={removerBloco}
           onErro={onErro} onGerenciar={onGerenciar} onSalvar={campos => salvarBloco(b._k, campos)} />
       ))}
+      <CampoOrientacoes valor={it.orientacoes} daBiblioteca={it.exercicios?.orientacoes} nome={nome}
+        salvar={novo => salvo.rodar(async () => { const { error } = await supabase.from('modelo_itens').update({ orientacoes: novo }).eq('id', it.id); return error ? mensagemErro(error) : '' })} />
       {comObs && <input className="item-obs" placeholder="Observação geral do exercício (opcional)" aria-label={`Observação geral de ${nome}`} value={obs} onChange={e => setObs(e.target.value)} onBlur={salvarObs} autoFocus={!it.observacao} />}
       <div className="item-rodape">
         <button type="button" className="mini" onClick={addBloco}><Icone nome="mais" tam={14} /> Tipo de série</button>
@@ -130,13 +142,13 @@ function EditorModelo({ id, onVoltar }) {
     if (m.error) return setMsg(mensagemErro(m.error))
     setModelo(m.data)
     setCampos({ nome: m.data.nome, categoria: m.data.categoria || '', categoria_treino_id: m.data.categoria_treino_id || '' })
-    const it = await supabase.from('modelo_itens').select('*, exercicios(nome, grupo_muscular)').eq('modelo_id', id).order('ordem')
+    const it = await supabase.from('modelo_itens').select('*, exercicios(nome, grupo_muscular, orientacoes)').eq('modelo_id', id).order('ordem')
     if (it.error) return setMsg(mensagemErro(it.error))
     setItens(it.data); setRecarga(r => r + 1)
   }
   useEffect(() => {
     carregar()
-    supabase.from('exercicios').select('id, nome, grupo_muscular').eq('ativo', true).order('nome').then(({ data }) => setBiblioteca(data || []))
+    supabase.from('exercicios').select('id, nome, grupo_muscular, orientacoes').eq('ativo', true).order('nome').then(({ data }) => setBiblioteca(data || []))
     supabase.from('modelos').select('categoria').then(({ data }) => setSugestoes([...new Set((data || []).map(x => x.categoria).filter(Boolean))]))
   }, [])
 
@@ -154,21 +166,48 @@ function EditorModelo({ id, onVoltar }) {
     const bloco = { categoria_id: principal ? principal.id : null, series: 3, repeticoes: '10', descanso_seg: 60, carga: null, observacao: null }
     const { error } = await supabase.from('modelo_itens').insert({
       modelo_id: id, exercicio_id: ex.id, ordem: itens.length, series: 3, repeticoes: '10', descanso_seg: 60, blocos: [bloco],
+      orientacoes: ex.orientacoes || '',   // copiadas da biblioteca; vazio se não houver
     })
     if (error) return setMsg(mensagemErro(error))
     setMsg(''); setAdicionando(false); setBusca(''); carregar()
   }
+  // Um bi-set se move inteiro, como no editor de fichas
   async function moverItem(i, d) {
-    const arr = mover(itens, i, d)
+    const arr = moverUnidade(itens, i, d)
     if (arr === itens) return
-    await Promise.all(arr.map((x, idx) => supabase.from('modelo_itens').update({ ordem: idx }).eq('id', x.id)))
+    await Promise.all(arr.map((x, idx) => (x.ordem !== idx ? supabase.from('modelo_itens').update({ ordem: idx }).eq('id', x.id) : null)))
     carregar()
   }
+  const parDe = it => (it.biset_grupo ? itens.find(x => x.biset_grupo === it.biset_grupo && x.id !== it.id) : null)
   async function remover(it) {
-    if (!(await confirmar({ titulo: `Remover ${it.exercicios ? it.exercicios.nome : 'este exercício'}?`, texto: 'Sai deste modelo. As fichas que já receberam o modelo não mudam.', acao: 'Remover', perigo: true }))) return
+    const par = parDe(it)
+    const texto = `Sai deste modelo.${par ? ` O bi-set com ${par.exercicios ? par.exercicios.nome : 'o outro exercício'} é desfeito.` : ''} As fichas que já receberam o modelo não mudam.`
+    if (!(await confirmar({ titulo: `Remover ${it.exercicios ? it.exercicios.nome : 'este exercício'}?`, texto, acao: 'Remover', perigo: true }))) return
     const { error } = await supabase.from('modelo_itens').delete().eq('id', it.id)
     if (error) return setMsg(mensagemErro(error))
+    if (par) await supabase.from('modelo_itens').update({ biset_grupo: null }).eq('id', par.id)
     carregar()
+  }
+  async function fazerBiset(i) {
+    if (!podeFazerBiset(itens, i)) return
+    const g = novoGrupo()
+    const r = await Promise.all([itens[i], itens[i + 1]].map(x => supabase.from('modelo_itens').update({ biset_grupo: g }).eq('id', x.id)))
+    const falha = r.find(x => x.error)
+    if (falha) return setMsg(mensagemErro(falha.error))
+    setMsg(''); carregar()
+  }
+  async function desfazerBiset(it) {
+    const { error } = await supabase.from('modelo_itens').update({ biset_grupo: null }).eq('modelo_id', id).eq('biset_grupo', it.biset_grupo)
+    if (error) return setMsg(mensagemErro(error))
+    setMsg(''); carregar()
+  }
+  async function trocarBiset(it) {
+    const par = parDe(it)
+    if (!par) return
+    const r = await Promise.all([supabase.from('modelo_itens').update({ ordem: par.ordem }).eq('id', it.id), supabase.from('modelo_itens').update({ ordem: it.ordem }).eq('id', par.id)])
+    const falha = r.find(x => x.error)
+    if (falha) return setMsg(mensagemErro(falha.error))
+    setMsg(''); carregar()
   }
 
   if (gerenciar) return <Categorias onVoltar={() => setGerenciar(false)} />
@@ -203,10 +242,22 @@ function EditorModelo({ id, onVoltar }) {
       <section className="card">
         <div className="topo"><strong>Exercícios do modelo</strong><span className="muted">{itens.length}</span></div>
         <div>
-          {itens.map((it, i) => (
-            <ItemModelo key={it.id + ':' + recarga} it={it} i={i} total={itens.length} cats={cats} onMove={moverItem} onRemove={remover}
-              onErro={setMsg} onGerenciar={() => setGerenciar(true)} />
-          ))}
+          {(() => {
+            const us = unidades(itens)
+            const item = (it, i, u, k, pos) => (
+              <ItemModelo key={it.id + ':' + recarga} it={it} i={i} cats={cats} onMove={moverItem} onRemove={remover}
+                onErro={setMsg} onGerenciar={() => setGerenciar(true)}
+                podeSubir={k > 0} podeDescer={k < us.length - 1}
+                biset={u.tipo === 'biset' ? (pos === 0 ? 'primeiro' : 'segundo') : null}
+                podeBiset={podeFazerBiset(itens, i)} onBiset={fazerBiset} onDesfazerBiset={desfazerBiset} onTrocarBiset={trocarBiset} />
+            )
+            return us.map((u, k) => u.tipo === 'biset' ? (
+              <div key={u.grupo} className="biset-grupo" role="group" aria-label={`Bi-set: ${u.itens.map(x => x.exercicios ? x.exercicios.nome : '').join(' e ')}`}>
+                <div className="biset-cab"><Etiqueta tipo="destaque">Bi-set</Etiqueta><span className="muted pequeno">Os dois em sequência, sem intervalo entre eles</span></div>
+                {u.itens.map((it, pos) => item(it, u.inicio + pos, u, k, pos))}
+              </div>
+            ) : item(u.itens[0], u.inicio, u, k, 0))
+          })()}
           {itens.length === 0 && <p className="muted">Nenhum exercício neste modelo ainda.</p>}
           <div className="row"><button className="btn" onClick={() => setAdicionando(!adicionando)}>+ Exercício</button></div>
           {adicionando && (
@@ -289,7 +340,7 @@ function InserirModelo({ modelo, cats, onFechar }) {
         <strong>O que será copiado</strong>
         {itens.map((it, i) => (
           <div key={it.id} className="item">
-            <div><strong>{i + 1}. {it.exercicios ? it.exercicios.nome : ''}</strong></div>
+            <div><strong>{i + 1}. {it.exercicios ? it.exercicios.nome : ''}</strong>{it.biset_grupo && <> <Etiqueta tipo="destaque">Bi-set</Etiqueta></>}</div>
             <div className="muted">{(Array.isArray(it.blocos) && it.blocos.length) ? descreverBlocos(it.blocos, cats) : `${it.series}×${it.repeticoes}`}</div>
           </div>
         ))}
@@ -374,6 +425,7 @@ function Biblioteca({ cats, onEditar, onInserir }) {
       const e2 = await supabase.from('modelo_itens').insert(it.data.map(x => ({
         modelo_id: r.data.id, exercicio_id: x.exercicio_id, ordem: x.ordem, series: x.series, repeticoes: x.repeticoes,
         descanso_seg: x.descanso_seg, observacao: x.observacao, blocos: x.blocos || [],
+        biset_grupo: x.biset_grupo || null, orientacoes: x.orientacoes ?? null,
       })))
       if (e2.error) { await supabase.from('modelos').delete().eq('id', r.data.id); return setMsg(mensagemErro(e2.error)) }   // não deixa um modelo pela metade
     }
@@ -433,7 +485,7 @@ function Biblioteca({ cats, onEditar, onInserir }) {
               <div style={{ marginTop: 8 }}>
                 {(previa[m.id] || []).map((it, i) => (
                   <div key={it.id} className="item">
-                    <strong>{i + 1}. {it.exercicios ? it.exercicios.nome : ''}</strong>
+                    <strong>{i + 1}. {it.exercicios ? it.exercicios.nome : ''}</strong>{it.biset_grupo && <> <Etiqueta tipo="destaque">Bi-set</Etiqueta></>}
                     <div className="muted">{(Array.isArray(it.blocos) && it.blocos.length) ? descreverBlocos(it.blocos, cats) : `${it.series}×${it.repeticoes}${it.descanso_seg ? `, descanso ${it.descanso_seg} s` : ''}`}</div>
                     {it.observacao && <div className="muted">{it.observacao}</div>}
                   </div>

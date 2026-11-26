@@ -38,3 +38,15 @@
 .item-rodape { display: flex; flex-wrap: wrap; gap: var(--e-2); margin-top: var(--e-2); }
 .item-rodape .mini { display: inline-flex; align-items: center; gap: var(--e-1); font-size: var(--t-sm); font-weight: 700; color: var(--txt2); }
 .item-rodape .mini:hover { color: var(--txt); }
+
+/* Bi-set: os dois exercícios dentro de uma moldura com a identificação, no editor de fichas e de modelos */
+.biset-grupo { margin: var(--e-3) 0; padding: var(--e-2) var(--e-3) var(--e-1); border: 1.5px solid rgb(var(--acento-rgb) / .55); border-radius: var(--r-card); background: rgb(var(--acento-rgb) / .05); }
+.biset-cab { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e-2); padding: var(--e-1) 0 var(--e-2); }
+.biset-grupo > .item:first-of-type { border-top: 0; }
+.biset-nota { margin: 6px 0 0; font-size: var(--t-sm); font-weight: 600; color: var(--verde2); }
+
+/* Orientações do exercício no treino ou modelo */
+.orient-campo { display: block; margin-top: var(--e-2); }
+.orient-campo .rot { display: block; margin-bottom: 2px; font-size: var(--t-xs); font-weight: 600; color: var(--txt2); }
+.orient-campo textarea { margin: 0; min-height: 56px; padding: 8px 10px; font-size: var(--t-md); }
+.orient-bib { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e-2); margin-top: var(--e-2); }
