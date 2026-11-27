@@ -13,6 +13,7 @@ import { Bloco } from './Editor'
 import { inserirExercicios, linhasDoModelo } from './prescricao'
 import { mover, descreverBlocos } from './seriesUtil'
 import CampoOrientacoes from './Orientacoes'
+import { GruposPrescricao, PainelVolume } from './VolumeGrupos'
 import Etiqueta from './Etiqueta'
 import { unidades, moverUnidade, podeFazerBiset, novoGrupo } from './bisetUtil'
 import './series.css'
@@ -46,7 +47,7 @@ function useCategorias() {
 }
 
 // ---------- Exercício dentro do modelo ----------
-function ItemModelo({ it, i, cats, onMove, onRemove, onErro, onGerenciar, podeSubir, podeDescer, biset, podeBiset, onBiset, onDesfazerBiset, onTrocarBiset }) {
+function ItemModelo({ it, i, cats, onMove, onRemove, onErro, onAtualizar, onGerenciar, podeSubir, podeDescer, biset, podeBiset, onBiset, onDesfazerBiset, onTrocarBiset }) {
   const principal = cats.find(c => c.principal)
   const [blocos, setBlocos] = useState(() => blocosDe(it, principal && principal.id))
   const [obs, setObs] = useState(it.observacao ?? '')
@@ -58,12 +59,14 @@ function ItemModelo({ it, i, cats, onMove, onRemove, onErro, onGerenciar, podeSu
   async function persistir(novos) {
     setBlocos(novos)
     const p = novos.find(b => { const c = cats.find(x => x.id === b.categoria_id); return c && c.principal }) || novos[0]
-    return salvo.rodar(async () => {
+    const erro = await salvo.rodar(async () => {
       const { error } = await supabase.from('modelo_itens').update({
         blocos: limpar(novos), series: p.series || 1, repeticoes: p.repeticoes || '10', descanso_seg: p.descanso_seg ?? null,
       }).eq('id', it.id)
       return error ? mensagemErro(error) : ''
     })
+    if (!erro) onAtualizar(it.id, { blocos: limpar(novos) })   // atualiza o volume por grupamento do modelo
+    return erro
   }
   const salvarBloco = async (k, campos) => persistir(blocos.map(b => (b._k === k ? { ...b, ...campos } : b)))
   async function addBloco() {
@@ -109,6 +112,12 @@ function ItemModelo({ it, i, cats, onMove, onRemove, onErro, onGerenciar, podeSu
         <Bloco key={b._k} b={b} i={j} total={blocos.length} cats={cats} onMove={moverBloco} onRemove={removerBloco}
           onErro={onErro} onGerenciar={onGerenciar} onSalvar={campos => salvarBloco(b._k, campos)} />
       ))}
+      <GruposPrescricao doLivro={it.exercicios?.grupo_muscular} principal={it.grupo_principal} secundarios={it.grupos_secundarios} nome={nome}
+        salvar={async campos => {
+          const erro = await salvo.rodar(async () => { const { error } = await supabase.from('modelo_itens').update(campos).eq('id', it.id); return error ? mensagemErro(error) : '' })
+          if (!erro) onAtualizar(it.id, campos)
+          return erro
+        }} />
       <CampoOrientacoes valor={it.orientacoes} daBiblioteca={it.exercicios?.orientacoes} nome={nome}
         salvar={novo => salvo.rodar(async () => { const { error } = await supabase.from('modelo_itens').update({ orientacoes: novo }).eq('id', it.id); return error ? mensagemErro(error) : '' })} />
       {comObs && <input className="item-obs" placeholder="Observação geral do exercício (opcional)" aria-label={`Observação geral de ${nome}`} value={obs} onChange={e => setObs(e.target.value)} onBlur={salvarObs} autoFocus={!it.observacao} />}
@@ -246,6 +255,7 @@ function EditorModelo({ id, onVoltar }) {
             const us = unidades(itens)
             const item = (it, i, u, k, pos) => (
               <ItemModelo key={it.id + ':' + recarga} it={it} i={i} cats={cats} onMove={moverItem} onRemove={remover}
+                onAtualizar={(id, campos) => setItens(xs => xs.map(x => (x.id === id ? { ...x, ...campos } : x)))}
                 onErro={setMsg} onGerenciar={() => setGerenciar(true)}
                 podeSubir={k > 0} podeDescer={k < us.length - 1}
                 biset={u.tipo === 'biset' ? (pos === 0 ? 'primeiro' : 'segundo') : null}
@@ -259,6 +269,7 @@ function EditorModelo({ id, onVoltar }) {
             ) : item(u.itens[0], u.inicio, u, k, 0))
           })()}
           {itens.length === 0 && <p className="muted">Nenhum exercício neste modelo ainda.</p>}
+          <PainelVolume itens={itens} cats={cats} />
           <div className="row"><button className="btn" onClick={() => setAdicionando(!adicionando)}>+ Exercício</button></div>
           {adicionando && (
             <>
@@ -426,6 +437,7 @@ function Biblioteca({ cats, onEditar, onInserir }) {
         modelo_id: r.data.id, exercicio_id: x.exercicio_id, ordem: x.ordem, series: x.series, repeticoes: x.repeticoes,
         descanso_seg: x.descanso_seg, observacao: x.observacao, blocos: x.blocos || [],
         biset_grupo: x.biset_grupo || null, orientacoes: x.orientacoes ?? null,
+        grupo_principal: x.grupo_principal || null, grupos_secundarios: x.grupos_secundarios || null,
       })))
       if (e2.error) { await supabase.from('modelos').delete().eq('id', r.data.id); return setMsg(mensagemErro(e2.error)) }   // não deixa um modelo pela metade
     }

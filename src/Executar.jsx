@@ -261,7 +261,7 @@ export default function Executar({ treino, perfil, onSair }) {
   )
 
   if (resumoDe) {
-    return <main><ResumoTreino sessaoId={resumoDe} onFechar={onSair} rotuloFechar="Voltar ao início" /></main>
+    return <main><ResumoTreino sessaoId={resumoDe} onFechar={onSair} rotuloFechar="Voltar ao início" comDestaque /></main>
   }
 
   if (fim) {

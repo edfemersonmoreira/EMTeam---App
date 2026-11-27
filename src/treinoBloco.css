@@ -4,7 +4,7 @@
 .treino-nav { position: sticky; top: var(--cab-alt); z-index: 5; display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; background: var(--bg); }
 
 /* O bloco do dia */
-.treino-bloco { scroll-margin-top: 140px; margin: 32px 0; border: 1px solid var(--borda2); border-radius: var(--r-card); background: var(--bg2); overflow: hidden; }
+.treino-bloco { scroll-margin-top: 140px; margin: 32px 0; border: 1px solid var(--borda2); border-radius: var(--r-card); background: var(--bg2); overflow: hidden; overflow: clip; }   /* clip: recorta os cantos sem impedir o painel de volume de acompanhar a rolagem */
 .treino-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 12px 14px; background: var(--card); border-bottom: 1px solid var(--borda2); border-left: 5px solid var(--verde2); }
 .treino-toggle { width: 36px; height: 36px; flex: none; display: flex; align-items: center; justify-content: center; border: 1px solid var(--borda); border-radius: var(--r-sm); background: transparent; color: var(--txt); cursor: pointer; }
 .treino-toggle svg { transition: transform .16s ease; }
@@ -50,3 +50,28 @@
 .orient-campo .rot { display: block; margin-bottom: 2px; font-size: var(--t-xs); font-weight: 600; color: var(--txt2); }
 .orient-campo textarea { margin: 0; min-height: 56px; padding: 8px 10px; font-size: var(--t-md); }
 .orient-bib { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e-2); margin-top: var(--e-2); }
+
+/* ----- Grupamentos da prescrição (principal e secundários de cada exercício neste treino) ----- */
+.gp { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--e-2) var(--e-4); margin: var(--e-2) 0 0; }
+.gp .rot { display: block; margin-bottom: 2px; font-size: var(--t-xs); font-weight: 600; color: var(--txt2); }
+.gp-principal select { min-width: 190px; min-height: 40px; }
+.gp-sec { min-width: 0; }
+.gp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.gp-chips .chip { min-height: 36px; }
+.gp-vazio { margin: var(--e-2) 0 0; }
+
+/* ----- Volume por grupamento do dia: fica preso na base da tela enquanto se monta o treino ----- */
+.painel-volume {
+  position: sticky; bottom: 0; z-index: 3; margin: var(--e-3) 0 0; padding: 10px 12px;
+  background: var(--card); border: 1px solid var(--borda2); border-radius: var(--r-card);
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, .18);
+}
+.pv-cab { display: flex; justify-content: space-between; align-items: baseline; gap: var(--e-2); margin-bottom: 6px; }
+.pv-cab strong { font-size: var(--t-sm); }
+.pv-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.pv-lista li { display: inline-flex; align-items: center; gap: 8px; padding: 4px 6px 4px 10px; border-radius: 999px; background: rgba(var(--acento-rgb), .1); border: 1px solid rgba(var(--acento-rgb), .35); }
+.pv-nome { font-size: var(--t-sm); font-weight: 700; }
+.pv-num { min-width: 24px; height: 24px; padding: 0 6px; border-radius: 999px; display: inline-grid; place-items: center; background: var(--verde); color: var(--sobre-verde); font-size: var(--t-sm); font-weight: 800; font-variant-numeric: tabular-nums; }
+.pv-nada, .pv-aviso, .pv-sec { margin: 6px 0 0; }
+.pv-aviso { color: var(--txt2); }
+.pv-aviso::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--borda2); }

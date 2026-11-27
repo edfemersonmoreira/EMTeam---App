@@ -9,3 +9,12 @@
 .pse-grid button:hover { border-color: var(--verde2); }
 .pse-grid button.on { background: var(--verde); border-color: var(--verde); color: var(--sobre-verde); }
 .pse-rotulo { min-height: 26px; margin: 4px 0 10px; font-weight: 700; color: var(--verde2); }
+
+/* Faixas de intensidade na conclusão do aeróbico: lista compacta, a faixa escolhida em destaque */
+.pse-faixas { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 6px; }
+.pse-faixas li { display: grid; grid-template-columns: 52px 1fr; gap: 10px; align-items: start; padding: 9px 10px; border: 1px solid var(--borda); border-radius: var(--r-sm); transition: border-color .16s ease, background .16s ease; }
+.pse-faixas li.on { border-color: var(--verde2); background: rgba(var(--acento-rgb), .08); }
+.pf-num { font-weight: 800; font-size: var(--t-sm); color: var(--txt2); white-space: nowrap; padding-top: 1px; font-variant-numeric: tabular-nums; }
+.pse-faixas li.on .pf-num { color: var(--verde2); }
+.pf-txt { font-size: var(--t-xs); color: var(--txt2); line-height: 1.4; }
+.pf-txt strong { display: block; font-size: var(--t-sm); color: var(--txt); margin-bottom: 1px; }

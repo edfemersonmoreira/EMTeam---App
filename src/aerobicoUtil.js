@@ -1,10 +1,17 @@
 // Funções puras do Aeróbico. O cronômetro é sempre calculado a partir de horários guardados
 // (início, pausa e pausa acumulada), nunca de um contador que depende da tela aberta.
-export const PSE_ROTULOS = [
-  'Repouso total', 'Muito leve', 'Leve', 'Moderado', 'Um pouco intenso', 'Intenso',
-  'Bem intenso', 'Muito intenso', 'Muito, muito intenso', 'Quase máximo', 'Máximo',
+// Escala de intensidade (PSE) de 0 a 10, em quatro faixas. O valor gravado continua sendo o número escolhido.
+export const FAIXAS_PSE = [
+  { de: 0, ate: 3, nome: 'Intensidade Baixa', texto: 'Sensação de que conseguiria manter por horas, a respiração é fácil e é possível conversar normalmente.' },
+  { de: 4, ate: 6, nome: 'Intensidade Moderada', texto: 'A respiração fica mais profunda, é possível manter uma conversa curta e ainda é confortável, mas já desafiador.' },
+  { de: 7, ate: 8, nome: 'Intensidade Alta', texto: 'Está no limite do desconfortável, há falta de ar evidente e é possível falar apenas uma frase.' },
+  { de: 9, ate: 10, nome: 'Intensidade Muito Alta', texto: 'É muito difícil manter a intensidade do exercício, a respiração fica muito ofegante e só é possível falar algumas palavras.' },
 ]
-export const rotuloPse = n => (n == null ? '' : (PSE_ROTULOS[n] || ''))
+export const faixaPse = n => (n == null ? null : FAIXAS_PSE.find(f => n >= f.de && n <= f.ate) || null)
+export const faixaTexto = f => (f.de === f.ate - 1 ? `${f.de} e ${f.ate}` : `${f.de} a ${f.ate}`)
+// Um rótulo por número (0 a 10), usado nos seletores e no histórico
+export const PSE_ROTULOS = Array.from({ length: 11 }, (_, n) => faixaPse(n).nome)
+export const rotuloPse = n => { const f = faixaPse(n); return f ? f.nome : '' }
 
 export const ativo = r => r.status === 'em_andamento' || r.status === 'pausada'
 export const pendente = r => r.status === 'finalizada' && r.pse == null

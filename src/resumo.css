@@ -45,3 +45,36 @@
 .sem-quebra { white-space: nowrap; }
 /* No admin (tela larga), o resumo fica numa coluna de leitura, para as barras não esticarem demais */
 .app-admin .resumo { max-width: 760px; }
+
+/* Destaque do treino: evolução real em relação à execução anterior do mesmo treino */
+.destaque { padding: var(--e-4) 18px; border-radius: var(--r-card); background: rgba(var(--acento-rgb), .10); border: 1px solid rgba(var(--acento-rgb), .45); }
+.destaque h3 { margin: 4px 0 var(--e-3); font-size: var(--t-xl); font-weight: 800; line-height: 1.25; }
+.dq-comp { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--e-2); }
+.dq-comp > div { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--card); border: 1px solid var(--borda); min-width: 0; }
+.dq-comp span { font-size: var(--t-xs); font-weight: 700; color: var(--txt2); text-transform: uppercase; letter-spacing: .05em; }
+.dq-comp strong { font-size: var(--t-md); font-weight: 800; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.dq-comp .dq-agora { border-color: var(--verde2); }
+.dq-comp .dq-agora span { color: var(--verde2); }
+.dq-mais { margin: var(--e-3) 0 0; font-size: var(--t-sm); }
+.dq-frase { margin: var(--e-2) 0 0; font-size: var(--t-sm); font-weight: 700; color: var(--verde2); }
+
+/* Execução por exercício (consulta do admin): um exercício por linha, séries ao abrir */
+.resumo-detalhes { margin: 0; }
+.resumo-detalhes h3 { margin: 0 0 2px; font-size: var(--t-base); font-weight: 800; }
+.resumo-detalhes > .pequeno { margin: 0 0 var(--e-2); }
+.rd-ex { border-top: 1px solid var(--borda); }
+.rd-ex summary { display: flex; align-items: center; gap: var(--e-2); min-height: 52px; padding: 8px 0; cursor: pointer; list-style: none; }
+.rd-ex summary::-webkit-details-marker { display: none; }
+.rd-ex summary::after { content: ''; width: 8px; height: 8px; margin-right: 6px; border-right: 2px solid var(--txt2); border-bottom: 2px solid var(--txt2); transform: rotate(45deg); transition: transform .16s ease; }
+.rd-ex[open] summary::after { transform: rotate(-135deg); }
+.rd-ex summary .muted { font-size: var(--t-xs); }
+.rd-series { list-style: none; margin: 0 0 var(--e-3); padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.rd-series li { display: grid; grid-template-columns: minmax(118px, auto) 64px 1fr; align-items: center; gap: var(--e-2); padding: 6px 10px; border-radius: var(--r-sm); background: var(--bg2); font-size: var(--t-sm); }
+.rd-n { font-weight: 700; color: var(--txt2); white-space: nowrap; }
+.rd-val { font-weight: 700; font-variant-numeric: tabular-nums; }
+.rd-val em { font-style: normal; font-weight: 600; color: var(--txt2); }
+.rd-series li.nao-concluida { opacity: .75; }
+@media (max-width: 480px) {
+  .rd-series li { grid-template-columns: 1fr auto; }
+  .rd-series .rd-val { grid-column: 1 / -1; }
+}

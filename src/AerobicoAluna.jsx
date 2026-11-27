@@ -5,7 +5,7 @@ import Icone from './Icone'
 import Voltar from './Voltar'
 import { useDialogo } from './Dialogo'
 import { hojeLocal } from './alongUtil'
-import { PSE_ROTULOS, rotuloPse, fmtRelogio, fmtDuracao, decorrido, pausar, retomar, finalizar, ativo, pendente } from './aerobicoUtil'
+import { PSE_ROTULOS, FAIXAS_PSE, faixaPse, faixaTexto, rotuloPse, fmtRelogio, fmtDuracao, decorrido, pausar, retomar, finalizar, ativo, pendente } from './aerobicoUtil'
 import './aerobico.css'
 
 // Aeróbico: seção da aluna, separada da musculação. Usa só as tabelas de aeróbico.
@@ -153,13 +153,22 @@ export default function AerobicoAluna({ perfil, onVoltar }) {
         <form className="card" onSubmit={e => salvarFinal(atual, e)}>
           <h3 style={{ marginTop: 0 }}>Atividade finalizada</h3>
           <p className="muted">{atual.modalidade}, {fmtDuracao(atual.duracao_seg)}</p>
-          <p><strong>Como foi o esforço?</strong> Escolha a sua PSE, de 0 (repouso) a 10 (esforço máximo).</p>
+          <p><strong>Como foi o esforço?</strong> Escolha a sua PSE, de 0 a 10.</p>
           <div className="pse-grid">
             {PSE_ROTULOS.map((_, n) => (
-              <button type="button" key={n} className={form.pse === n ? 'on' : ''} aria-pressed={form.pse === n} onClick={() => setForm({ ...form, pse: n })}>{n}</button>
+              <button type="button" key={n} className={form.pse === n ? 'on' : ''} aria-pressed={form.pse === n} aria-label={`${n}, ${rotuloPse(n)}`} onClick={() => setForm({ ...form, pse: n })}>{n}</button>
             ))}
           </div>
-          <div className="pse-rotulo">{form.pse == null ? 'Toque em um número' : `${form.pse}: ${rotuloPse(form.pse)}`}</div>
+          <div className="pse-rotulo" aria-live="polite">{form.pse == null ? 'Toque em um número' : `${form.pse}: ${rotuloPse(form.pse)}`}</div>
+          {/* As quatro faixas da escala; a da nota escolhida fica em destaque */}
+          <ul className="pse-faixas" aria-label="Faixas de intensidade">
+            {FAIXAS_PSE.map(f => (
+              <li key={f.de} className={faixaPse(form.pse) === f ? 'on' : ''}>
+                <span className="pf-num">{faixaTexto(f)}</span>
+                <span className="pf-txt"><strong>{f.nome}</strong>{f.texto}</span>
+              </li>
+            ))}
+          </ul>
           <input placeholder="Modalidade realizada" value={form.modalidade || atual.modalidade} onChange={e => setForm({ ...form, modalidade: e.target.value })} />
           <textarea rows="3" placeholder="Observações (opcional)" value={form.obs} onChange={e => setForm({ ...form, obs: e.target.value })} />
           {msg && <p className="erro">{msg}</p>}

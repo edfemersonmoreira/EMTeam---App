@@ -27,6 +27,8 @@ export async function inserirExercicios(treinoId, base, linhasOriginais, cats) {
       treino_id: treinoId, exercicio_id: l.exercicio_id, ordem: base + k,
       series: l.series || 3, repeticoes: l.repeticoes || '10', descanso_seg: l.descanso_seg ?? null, observacao: l.observacao ?? null,
       biset_grupo: l.biset_grupo || null,
+      // Classificação muscular da prescrição: copiada quando a origem tem; nunca preenchida automaticamente
+      grupo_principal: l.grupo_principal || null, grupos_secundarios: l.grupos_secundarios || null,
       orientacoes: l.orientacoes === undefined ? (daBiblioteca[l.exercicio_id] ?? '') : l.orientacoes,
     }).select('id').single()
     if (error) return desfazer(error)
@@ -53,5 +55,6 @@ export const linhasDoModelo = itens => itens.map(x => ({
   exercicio_id: x.exercicio_id, series: x.series, repeticoes: x.repeticoes,
   descanso_seg: x.descanso_seg, observacao: x.observacao, blocos: Array.isArray(x.blocos) ? x.blocos : [],
   biset_grupo: x.biset_grupo || null,
+  grupo_principal: x.grupo_principal || null, grupos_secundarios: x.grupos_secundarios || null,
   ...(x.orientacoes == null ? {} : { orientacoes: x.orientacoes }),
 }))

@@ -7,6 +7,7 @@ import Menu from './Menu'
 import Voltar from './Voltar'
 import { CabecalhoPagina } from './Cabecalho'
 import CampoOrientacoes from './Orientacoes'
+import { GruposPrescricao, PainelVolume } from './VolumeGrupos'
 import Etiqueta from './Etiqueta'
 import { unidades, moverUnidade, podeFazerBiset, novoGrupo } from './bisetUtil'
 import { useDialogo } from './Dialogo'
@@ -160,10 +161,12 @@ function Item({ it, i, rotulo, cats, onMove, onRemove, onDuplicar, onChange, onE
     onErro(''); onChange()
   }
   async function salvarBloco(b, campos) {
-    return salvo.rodar(async () => {
+    const erro = await salvo.rodar(async () => {
       const { error } = await supabase.from('treino_exercicio_series').update(campos).eq('id', b.id)
       return error ? mensagemErro(error) : ''
     })
+    if (!erro) onChange()   // atualiza o volume por grupamento do treino
+    return erro
   }
   async function moverBloco(j, d) {
     const k = j + d
@@ -215,6 +218,8 @@ function Item({ it, i, rotulo, cats, onMove, onRemove, onDuplicar, onChange, onE
           ))}
         </>
       )}
+      <GruposPrescricao doLivro={it.exercicios?.grupo_muscular} principal={it.grupo_principal} secundarios={it.grupos_secundarios} nome={nome}
+        salvar={async campos => { const erro = await salvo.rodar(async () => erroDe(await supabase.from('treino_exercicios').update(campos).eq('id', it.id))); if (!erro) onChange(); return erro }} />
       <CampoOrientacoes valor={it.orientacoes} daBiblioteca={it.exercicios?.orientacoes} nome={nome}
         salvar={async novo => { const erro = await salvo.rodar(async () => erroDe(await supabase.from('treino_exercicios').update({ orientacoes: novo }).eq('id', it.id))); if (!erro) onChange(); return erro }} />
       {comObs && <input className="item-obs" placeholder="Observação geral do exercício (opcional)" aria-label={`Observação geral de ${nome}`} value={obs} onChange={e => setObs(e.target.value)} onBlur={salvarObs} autoFocus={!it.observacao} />}
@@ -294,6 +299,7 @@ function TreinoCard({ treino, letra, proximaOrdem, biblioteca, cats, catsTreino,
   const linhaDe = x => ({
     exercicio_id: x.exercicio_id, series: x.series, repeticoes: x.repeticoes, descanso_seg: x.descanso_seg, observacao: x.observacao,
     biset_grupo: x.biset_grupo || null, orientacoes: x.orientacoes ?? null,
+    grupo_principal: x.grupo_principal || null, grupos_secundarios: x.grupos_secundarios || null,
     blocos: blocosOrdenados(x).map(b => ({ categoria_id: b.categoria_id, series: b.series, repeticoes: b.repeticoes, carga: b.carga, descanso_seg: b.descanso_seg, observacao: b.observacao })),
   })
 
@@ -349,6 +355,7 @@ function TreinoCard({ treino, letra, proximaOrdem, biblioteca, cats, catsTreino,
         modelo_id: data.id, exercicio_id: x.exercicio_id, ordem: k, series: x.series,
         repeticoes: x.repeticoes, descanso_seg: x.descanso_seg, observacao: x.observacao,
         biset_grupo: x.biset_grupo || null, orientacoes: x.orientacoes ?? null,
+        grupo_principal: x.grupo_principal || null, grupos_secundarios: x.grupos_secundarios || null,
       }
       if (x.blocos) l.blocos = blocosOrdenados(x).map(b => ({
         categoria_id: b.categoria_id, series: b.series, repeticoes: b.repeticoes, carga: b.carga, descanso_seg: b.descanso_seg, observacao: b.observacao,
@@ -451,6 +458,7 @@ function TreinoCard({ treino, letra, proximaOrdem, biblioteca, cats, catsTreino,
         ) : item(u.itens[0], u.inicio, u, k, 0))
       })()}
       {items.length === 0 && <p className="muted">Nenhum exercício neste treino ainda.</p>}
+      <PainelVolume itens={items} cats={cats} />
 
       <div className="row wrap treino-acoes">
         <button className="btn" onClick={() => { setModo(modo === 'add' ? null : 'add'); setMsg(''); setOk('') }}>+ Exercício</button>

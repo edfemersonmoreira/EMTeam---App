@@ -6,8 +6,27 @@ import { CabecalhoPagina } from './Cabecalho'
 import Icone from './Icone'
 import ResumoTreino from './Resumo'
 import { fmtDuracaoSessao } from './resumoUtil'
+import { GRUPOS, lerGrupos } from './grupos'
 import './editor.css'
 import './aluna.css'
+
+// Seções da aba Exercícios: cada combinação de grupamentos cadastrada na biblioteca vira uma seção
+// ("Quadríceps", "Quadríceps + Glúteos"). Assim nenhum exercício se repete e nada é reclassificado.
+const SEM_GRUPO = 'Sem grupamento cadastrado'
+const posGrupo = g => { const i = GRUPOS.indexOf(g); return i < 0 ? GRUPOS.length : i }
+function secoesPorGrupo(exercicios) {
+  const m = {}
+  exercicios.forEach(ex => {
+    const gs = lerGrupos(ex.grupo_muscular)
+    const k = gs.length ? gs.join(' + ') : SEM_GRUPO
+    ;(m[k] || (m[k] = { titulo: k, grupos: gs, itens: [] })).itens.push(ex)
+  })
+  return Object.values(m).sort((a, b) =>
+    (a.titulo === SEM_GRUPO) - (b.titulo === SEM_GRUPO) ||
+    posGrupo(a.grupos[0]) - posGrupo(b.grupos[0]) ||
+    a.grupos.length - b.grupos.length ||
+    a.titulo.localeCompare(b.titulo, 'pt-BR'))
+}
 
 const chaveDia = iso => new Date(iso).toLocaleDateString('sv-SE')
 const fmtCurto = t => new Date(t).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
@@ -79,10 +98,10 @@ export default function Historico({ alunaId, titulo, onVoltar, trilha }) {
       const ids = [...new Set(r.data.map(x => x.exercicio_id))]
       const nomes = {}
       if (ids.length) {
-        const ex = await supabase.from('exercicios').select('id, nome').in('id', ids)
-        ;(ex.data || []).forEach(e => { nomes[e.id] = e.nome })
+        const ex = await supabase.from('exercicios').select('id, nome, grupo_muscular').in('id', ids)
+        ;(ex.data || []).forEach(e => { nomes[e.id] = e })
       }
-      setRegs(r.data.map(x => ({ ...x, exercicios: { nome: nomes[x.exercicio_id] } })))
+      setRegs(r.data.map(x => ({ ...x, exercicios: { nome: nomes[x.exercicio_id]?.nome, grupo_muscular: nomes[x.exercicio_id]?.grupo_muscular } })))
     })()
   }, [alunaId])
 
@@ -101,7 +120,7 @@ export default function Historico({ alunaId, titulo, onVoltar, trilha }) {
   const exercicios = useMemo(() => {
     const m = {}
     ;(regs || []).forEach(r => {
-      if (!m[r.exercicio_id]) m[r.exercicio_id] = { id: r.exercicio_id, nome: r.exercicios?.nome || '—', ultimo: r.registrado_em, regs: [] }
+      if (!m[r.exercicio_id]) m[r.exercicio_id] = { id: r.exercicio_id, nome: r.exercicios?.nome || '—', grupo_muscular: r.exercicios?.grupo_muscular, ultimo: r.registrado_em, regs: [] }
       m[r.exercicio_id].regs.push(r)
     })
     return Object.values(m).sort((a, b) => a.nome.localeCompare(b.nome))
@@ -120,7 +139,7 @@ export default function Historico({ alunaId, titulo, onVoltar, trilha }) {
 
   if (sessaoSel) {
     const fechar = () => setSessaoSel(null)
-    return <ResumoTreino sessaoId={sessaoSel} onFechar={fechar} rotuloFechar="Voltar aos treinos"
+    return <ResumoTreino sessaoId={sessaoSel} onFechar={fechar} rotuloFechar="Voltar aos treinos" detalhes={!!trilha}
       voltar={trilha ? null : fechar} trilha={trilha ? [...trilha, { rotulo: 'Treinos realizados', onClick: fechar }] : null} />
   }
 
@@ -204,14 +223,18 @@ export default function Historico({ alunaId, titulo, onVoltar, trilha }) {
           )
       )}
       {aba === 'exercicios' && exercicios.length === 0 && <p className="muted">Ainda não há cargas registradas.</p>}
-      {aba === 'exercicios' && exercicios.map(ex => (
-        <div key={ex.id} className="card lista-ex" onClick={() => setSel(ex.id)}>
-          <div>
-            <strong>{ex.nome}</strong>
-            <div className="muted">Último registro em {new Date(ex.ultimo).toLocaleDateString('pt-BR')}</div>
+      {aba === 'exercicios' && secoesPorGrupo(exercicios).map(sec => (
+        <section key={sec.titulo} className="cargas-secao" aria-label={sec.titulo}>
+          <h3 className={sec.titulo === SEM_GRUPO ? 'muted' : ''}>{sec.titulo}<span className="cargas-qtd">{sec.itens.length}</span></h3>
+          <div className="cargas-lista">
+            {sec.itens.map(ex => (
+              <button key={ex.id} type="button" className="cargas-ex" onClick={() => setSel(ex.id)}>
+                <span className="grow"><strong>{ex.nome}</strong><span className="muted bl">Último registro em {new Date(ex.ultimo).toLocaleDateString('pt-BR')}</span></span>
+                <Icone nome="chevron" tam={16} />
+              </button>
+            ))}
           </div>
-          <Icone nome="chevron" tam={16} />
-        </div>
+        </section>
       ))}
     </>
   )

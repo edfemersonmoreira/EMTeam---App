@@ -141,3 +141,12 @@ table.hist tr:last-child td { border-bottom: 0; }
 .rodada .serie { margin: 8px 0; }
 .rodada .chk.on { background: var(--cat, var(--verde2)); border-color: var(--cat, var(--verde2)); color: var(--tinta); }
 .linha-biset .etiqueta { margin-bottom: 2px; }
+
+/* ----- Cargas da aluna (admin): exercícios agrupados por grupamento ----- */
+.cargas-secao { margin: var(--e-4) 0 0; }
+.cargas-secao h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 var(--e-2); font-size: var(--t-base); font-weight: 800; }
+.cargas-qtd { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; display: inline-grid; place-items: center; background: var(--bg2); color: var(--txt2); font-size: var(--t-xs); font-weight: 700; }
+.cargas-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px; }
+.cargas-ex { display: flex; align-items: center; gap: var(--e-3); width: 100%; min-height: 56px; padding: 8px 12px; text-align: left; background: var(--card); color: var(--txt); border: 1px solid var(--borda); border-radius: var(--r-sm); cursor: pointer; font: inherit; transition: border-color .16s ease; }
+.cargas-ex:hover { border-color: var(--verde2); }
+.cargas-ex .muted { font-size: var(--t-xs); }
